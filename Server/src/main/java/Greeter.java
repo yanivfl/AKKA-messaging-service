@@ -1,12 +1,7 @@
 import akka.actor.AbstractActor;
 import akka.event.Logging;
 import akka.event.LoggingAdapter;
-import scala.Serializable;
-
-
-enum Message implements Serializable {
-    GREET, DONE;
-}
+import SharedMessages.Message;
 
 public class Greeter extends AbstractActor {
 
