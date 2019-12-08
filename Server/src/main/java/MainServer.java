@@ -1,7 +1,7 @@
 import akka.actor.ActorSystem;
 import akka.actor.Props;
 import com.typesafe.config.ConfigFactory;
-import example.akka.remote.server.CalculatorActor;
+
 
 
 import java.io.BufferedReader;
@@ -15,7 +15,7 @@ public class MainServer {
         ActorSystem system = ActorSystem.create("AkkaRemoteServer", ConfigFactory.load());
 
         // Create an actor
-        system.actorOf(Props.create(Greeter.class), "CalculatorActor");
+        system.actorOf(Props.create(Greeter.class), "Greeter");
 
 //        System.out.println("ENTER to terminate");
 //        try(BufferedReader in = new BufferedReader(new InputStreamReader(System.in))) {
