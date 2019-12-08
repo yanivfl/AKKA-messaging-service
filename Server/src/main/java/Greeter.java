@@ -1,7 +1,8 @@
+import SharedMessages.Messages.*;
 import akka.actor.AbstractActor;
 import akka.event.Logging;
 import akka.event.LoggingAdapter;
-import SharedMessages.Message;
+
 
 public class Greeter extends AbstractActor {
 

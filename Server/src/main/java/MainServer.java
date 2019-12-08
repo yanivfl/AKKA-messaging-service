@@ -1,3 +1,4 @@
+import Users.Constants;
 import akka.actor.ActorSystem;
 import akka.actor.Props;
 import com.typesafe.config.ConfigFactory;
@@ -12,10 +13,10 @@ public class MainServer {
 
     public static void main(String[] args) {
         // Creating environment
-        ActorSystem system = ActorSystem.create("AkkaRemoteServer", ConfigFactory.load());
+        ActorSystem system = ActorSystem.create(Constants.SERVER, ConfigFactory.load());
 
         // Create an actor
-        system.actorOf(Props.create(Greeter.class), "Greeter");
+        system.actorOf(Props.create(Manager.class), Constants.MANAGER);
 
 //        System.out.println("ENTER to terminate");
 //        try(BufferedReader in = new BufferedReader(new InputStreamReader(System.in))) {

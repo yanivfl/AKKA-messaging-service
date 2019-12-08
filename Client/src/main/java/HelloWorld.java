@@ -2,7 +2,7 @@ import akka.actor.AbstractActor;
 import akka.actor.ActorSelection;
 import akka.event.Logging;
 import akka.event.LoggingAdapter;
-import SharedMessages.Message;
+import SharedMessages.Messages.*;
 
 public class HelloWorld extends AbstractActor {
 
