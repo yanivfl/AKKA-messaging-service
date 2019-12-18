@@ -7,11 +7,12 @@ import akka.event.LoggingAdapter;
 
 import java.io.*;
 import java.nio.file.Paths;
+import java.util.Scanner;
 
 
 public class ClientActor extends AbstractActor {
     private String clientUserName = "";
-    private final ActorRef client = this.self();
+    private final ActorRef myActorRef = this.self();
     public final ActorSelection manager = getContext().actorSelection(Constants.PATH_TO_MANAGER);
     private LoggingAdapter logger = Logging.getLogger(getContext().system(), this);
 
@@ -22,7 +23,7 @@ public class ClientActor extends AbstractActor {
                 .match(TextMessage.class, this::onTextMessage)
                 .match(FileMessage.class, this::onFileMessage)
                 .match(ErrorMessage.class, this::onErrorMessage)
-                .match(GroupInviteRequestReply.class, this::onInviteRequest)
+                .match(GroupInviteRequestReply.class, this::onGroupInviteRequestReply)
                 .build();
     }
 
@@ -78,18 +79,16 @@ public class ClientActor extends AbstractActor {
         System.out.println(errorMsg.error);
     }
 
-    private void onInviteRequest(GroupInviteRequestReply reqMsg) {
-        logger.info(reqMsg.text);
+    private void onGroupInviteRequestReply(GroupInviteRequestReply reqMsg) {
+        System.out.println(reqMsg.text);
+        Scanner scanner = new Scanner(System.in);
+        String userInput = scanner.nextLine();
+        boolean isAccept = userInput.
+                toLowerCase().
+                equals("yes".toLowerCase());
+        scanner.close();
+        getSender().tell(new isAcceptInvite(isAccept), myActorRef);
+
+
     }
 }
-
-
-//    @Override
-//    public void preStart() throws Exception { // this is the first step once the Actor is added to the system.
-////        System.out.println(conf.getString("akka.actor.debug.lifecycle"));
-////        String path = conf.getString("akka.remote.netty.tcp.prefix") +
-////                Constants.SERVER + "@" +
-////                conf.getString("akka.remote.netty.tcp.hostname") + ":" +
-////                3553 + "/user/" + Constants.MANAGER;
-////        logger.info("Path is: " + path);
-//}

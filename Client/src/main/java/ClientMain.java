@@ -64,6 +64,7 @@ import java.util.Scanner;
             }
 
             // When received a disconnect command, the connection with the server is closed
+            scanner.close();
             system.terminate();
         }
 

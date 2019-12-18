@@ -8,7 +8,7 @@ public class UserInfo{
     private String userName;
     private boolean isAdmin;
     private List<String> groups;
-    ActorRef actor;
+    private ActorRef actor;
 
     public UserInfo(String userName, List<String> groups, ActorRef actor) {
         this.userName = userName;

@@ -6,6 +6,7 @@ import Groups.GroupInfo;
 import akka.actor.AbstractActor;
 import akka.actor.ActorRef;
 import akka.actor.PoisonPill;
+import akka.actor.Props;
 import akka.event.Logging;
 import akka.event.LoggingAdapter;
 import akka.pattern.Patterns;
@@ -32,13 +33,14 @@ public class Manager extends AbstractActor {
         return receiveBuilder()
                 .match(ConnectionMessage.class, this::onConnect)
                 .match(DisconnectMessage.class, this::onDisconnect)
-                .match(isUserExistMessage.class, this::isUserExist)
+                .match(isUserExistMessage.class, this::onIsUserExist)
                 .match(GroupCreateMessage.class,this::onGroupCreate)
                 .match(GroupLeaveMessage.class, this::onGroupLeave)
+                .match(GroupInviteMessage.class, this::onGroupInvite)
                 .build();
     }
 
-    private void onConnect(ConnectionMessage connectMsg) {
+    private void onConnect(ConnectionMessage connectMsg) { //TODO use validator
         logger.info("Got a connection Message");
         if (!usersMap.containsKey(connectMsg.username)) {
             logger.info("Creating new user: " + connectMsg.username);
@@ -50,7 +52,7 @@ public class Manager extends AbstractActor {
             getSender().tell(new ErrorMessage(Constants.CONNECT_FAIL(connectMsg.username)), ActorRef.noSender());
         }
     }
-
+    //TODO use validator
     private void onDisconnect(DisconnectMessage disconnectMsg) { //TODO: gracefully leaves all groups
         logger.info("Got a disconnection Message");
         if (usersMap.containsKey(disconnectMsg.username)){
@@ -65,7 +67,7 @@ public class Manager extends AbstractActor {
         }
     }
 
-    private void isUserExist(isUserExistMessage msg) {
+    private void onIsUserExist(isUserExistMessage msg) { //TODO use validator
         logger.info("Got a IsUserExistMessage");
         if(usersMap.containsKey(msg.targetusername)) {
             ActorRef targetActor = usersMap.get(msg.targetusername).getActor();
@@ -77,11 +79,11 @@ public class Manager extends AbstractActor {
         }
     }
 
-    private void onGroupCreate(GroupCreateMessage createMsg) {
+    private void onGroupCreate(GroupCreateMessage createMsg) { //TODO use validators
         logger.info("Got a Create Group Message");
         if (!groupsMap.containsKey(createMsg.groupname)) {
             logger.info("Creating new group: " + createMsg.groupname);
-            groupsMap.put(createMsg.groupname,  new GroupInfo(createMsg.groupname, createMsg.username));
+            groupsMap.put(createMsg.groupname,  new GroupInfo(createMsg.groupname, createMsg.username, getSender()));
             usersMap.get(createMsg.username).getGroups().add(createMsg.groupname);
             logger.info("Debug- the usersgroups map:\n " + groupsMap.toString());
             getSender().tell(new TextMessage(Constants.GROUP_CREATE_SUCC(createMsg.groupname)), ActorRef.noSender());
@@ -91,15 +93,53 @@ public class Manager extends AbstractActor {
         }
     }
 
+
+
     private void onGroupLeave(GroupLeaveMessage leaveMsg) {
         logger.info("Got a Leave Group Message");
         String groupname = leaveMsg.groupname;
         String username = leaveMsg.username;
 
-        if (!isGroupExist(groupname)) return;
-        GroupInfo group = groupsMap.get(groupname);
-        if (isGroupContainsUser(group, username)) return;
+        if (!ValidateIsGroupExist(groupname, true)) return;
 
+        GroupInfo group = groupsMap.get(groupname);
+        if (!ValidateIsGroupContainsUser(group, username, true)) return;
+
+        boolean deleteGroup = false;
+        Iterable<ActorRef> routees = group.getRouter();
+        ActorRef broadcastRouter = getContext().actorOf(Props.empty().withRouter(RoundRobinRouter.create(routees)));
+        switch (group.getUserGroupMode(username)){
+            case ADMIN:
+                deleteGroup = true;
+                broadcastRouter.tell(new TextMessage(groupname +" admin has closed " + groupname +"!"), ActorRef.noSender());
+
+            case CO_ADMIN:
+                broadcastRouter.tell(new TextMessage(username +" is removed from co-admin list in " + groupname), ActorRef.noSender());
+
+            case MUTED:
+            case USER:
+                removeUserFromGroup(groupname, username, group);
+                broadcastRouter.tell(new TextMessage(username +" has left " + groupname + "!"), ActorRef.noSender());
+                break;
+            case NONE:
+                logger.info("DEBUG - Manager should not Reach this point!");
+                return;
+        }
+        if(deleteGroup){
+            for(String userName : group.getTotalUsers()){ //TODO remove total users outside the scope. will throw exception
+                removeUserFromGroup(groupname, userName, group);
+            }
+            groupsMap.remove(groupname);
+        }
+    }
+
+    private void removeUserFromGroup(String groupname, String username, GroupInfo group) {
+        logger.info("removing " + username + " from " + groupname);
+        group.removeUsername(username, group.getUserGroupMode(username));
+        group.removeRoutee(usersMap.get(username).getActor());
+        group.getTotalUsers().remove(username);
+        usersMap.get(username).getGroups().remove(groupname);
+        logger.info("group after remove is: " + group.toString());
     }
 
     private void onGroupInvite(GroupInviteMessage inviteMsg) {
@@ -107,66 +147,45 @@ public class Manager extends AbstractActor {
         String groupname = inviteMsg.groupname;
         String sourceusername = inviteMsg.sourceusername;
         String targetusername = inviteMsg.targetusername;
-
+        GroupInfo group = groupsMap.get(groupname); //returns null if doesn't exist. we will leave function in validator
         // check all pre-conditions
-        if (!isGroupExist(groupname)) return;
-        GroupInfo group = groupsMap.get(groupname);
-        if (!userHasPriviledges(group, sourceusername)) return;
-        if (!isUserExist(targetusername)) return;
-        if (isGroupContainsUser(group, sourceusername)) return;
+        if (!ValidateIsGroupExist(groupname, true)) return;
+        if (!ValidateIsGroupContainsUser(group, sourceusername, true)) return;
+        if (!ValidateUserHasPriviledges(group, sourceusername, true)) return;
+        if (!ValidateIsUserExist(targetusername, true)) return;
+        if (ValidateIsGroupContainsUser(group, targetusername, false)) return;
 
         //pre-conditions checked!
         logger.info("sends invite request to " + targetusername);
         String msg = "You have been invited to " + groupname + ", Accept?";
+        ActorRef targetActor = usersMap.get(targetusername).getActor();
         final Timeout timeout = Timeout.create(Duration.ofSeconds(1));
-        Future<Object> rt = Patterns.ask(getSender(), new GroupInviteRequestReply(groupname, sourceusername, msg), timeout);
+        Future<Object> rt = Patterns.ask(targetActor, new GroupInviteRequestReply(groupname, sourceusername, msg), timeout);
         try {
             Object result = Await.result(rt, timeout.duration());
-            if (result.toString() == "yes")
-                logger.info("adding " + targetusername + " to " + groupname);
-                group.getUsers().add(targetusername);
-                getSender().tell(new TextMessage("Welcome to" + groupname + "!"), ActorRef.noSender());
-
+            if (result.getClass() == isAcceptInvite.class) {
+                if(((isAcceptInvite)result).isAccept){
+                    logger.info("adding " + targetusername + " to " + groupname);
+                    addUserToGroup(targetusername, group, targetActor);
+                    targetActor.tell(new TextMessage("Welcome to" + groupname + "!"), ActorRef.noSender());
+                    logger.info("group after invite is: " + group.toString());
+                }
+                logger.info(targetusername + " declined group invitation. after invite is: " + group.toString());
+            }
         } catch (Exception e) {
             logger.info(Constants.SERVER_IS_OFFLINE_DISCONN);
             getSender().tell(PoisonPill.getInstance(), ActorRef.noSender());
         }
     }
 
+    private void addUserToGroup(String targetusername, GroupInfo group, ActorRef targetActor) {
+        group.getUsers().add(targetusername);
+        group.getTotalUsers().add(targetusername);
+        group.getRouter().add(targetActor);
+    }
+
 
     /** Auxiliary methods **/
-
-    private boolean isGroupExist(String groupname){
-        if (groupsMap.containsKey(groupname)) { return true; }
-
-        logger.info(Constants.NOT_EXIST(groupname));
-        getSender().tell(new ErrorMessage(Constants.NOT_EXIST(groupname)), ActorRef.noSender());
-        return false;
-    }
-
-    private boolean userHasPriviledges(GroupInfo group,String username) {
-        if (group.userHasPriviledges(username)) { return true; }
-
-        logger.info(Constants.GROUP_NOT_HAVE_PREVILEDGES(group.getGroupName()));
-        getSender().tell(new ErrorMessage(Constants.GROUP_NOT_HAVE_PREVILEDGES(group.getGroupName())), ActorRef.noSender());
-        return false;
-    }
-
-    private boolean isUserExist(String username) {
-        if(usersMap.containsKey(username)) { return true; }
-
-        logger.info(Constants.NOT_EXIST(username));
-        getSender().tell(new ErrorMessage(Constants.NOT_EXIST(username)), ActorRef.noSender());
-        return false;
-    }
-
-    private boolean isGroupContainsUser(GroupInfo group, String username) {
-        if(!group.contains(username)) { return false; }
-
-        logger.info(Constants.GROUP_TARGET_ALREADY_BELONGS(username, group.getGroupName()));
-        getSender().tell(new ErrorMessage(Constants.GROUP_TARGET_ALREADY_BELONGS(username, group.getGroupName())), ActorRef.noSender());
-        return true;
-    }
 
         /**
          * if actor doesn't exist, return null
@@ -198,4 +217,61 @@ public class Manager extends AbstractActor {
             .findFirst()
             .get();
     }
+
+
+
+
+//****************************Validators**********************************
+    private boolean ValidateIsGroupContainsUser(GroupInfo group, String username, boolean expectedContained){
+        boolean isContained =group.getTotalUsers().contains(username);
+        if(isContained && !expectedContained){
+            logger.info(Constants.GROUP_TARGET_ALREADY_BELONGS(username, group.getGroupName()));
+            getSender().tell(new ErrorMessage(Constants.GROUP_TARGET_ALREADY_BELONGS(username, group.getGroupName())), ActorRef.noSender());
+        }
+        if(!isContained && expectedContained){
+            logger.info(Constants.GROUP_LEAVE_FAIL(group.getGroupName(), username));
+            getSender().tell(new ErrorMessage(Constants.GROUP_LEAVE_FAIL(group.getGroupName(), username)), ActorRef.noSender());
+        }
+        return isContained;
+    }
+
+    private boolean ValidateIsGroupExist(String groupName, boolean expectedExist){
+        boolean isExist = groupsMap.containsKey(groupName);
+        if(isExist && !expectedExist){
+            logger.info(Constants.GROUP_CREATE_FAIL(groupName));
+            getSender().tell(new ErrorMessage(Constants.GROUP_CREATE_FAIL(groupName)), ActorRef.noSender());
+        }
+        if(!isExist && expectedExist){
+            logger.info(Constants.NOT_EXIST(groupName));
+            getSender().tell(new ErrorMessage(Constants.NOT_EXIST(groupName)), ActorRef.noSender());
+        }
+        return isExist;
+    }
+
+    private boolean ValidateUserHasPriviledges(GroupInfo group,String username, boolean expectedPrivilege) {
+       boolean isPrivilege = group.userHasPriviledges(username);
+        if(isPrivilege && !expectedPrivilege){
+            logger.info("No Worries Bro");
+        }
+        if(!isPrivilege && expectedPrivilege){
+            logger.info(Constants.GROUP_NOT_HAVE_PREVILEDGES(group.getGroupName()));
+            getSender().tell(new ErrorMessage(Constants.GROUP_NOT_HAVE_PREVILEDGES(group.getGroupName())), ActorRef.noSender());
+        }
+        return isPrivilege;
+    }
+
+    private boolean ValidateIsUserExist(String username, boolean expectedExist) {
+        boolean isExist = usersMap.containsKey(username);
+        if(isExist && !expectedExist){
+            logger.info(Constants.NOT_EXIST(username));
+            getSender().tell(new ErrorMessage(Constants.NOT_EXIST(username)), ActorRef.noSender());
+        }
+        if(!isExist && expectedExist){
+            logger.info(Constants.CONNECT_FAIL(username));
+            getSender().tell(new ErrorMessage(Constants.CONNECT_FAIL(username)), ActorRef.noSender());
+        }
+        return isExist;
+    }
+
+
 }

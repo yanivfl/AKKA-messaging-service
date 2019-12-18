@@ -129,6 +129,16 @@ public class Messages implements Serializable {
         }
     }
 
+    public static class isAcceptInvite implements Serializable {
+        public final boolean isAccept;
+
+
+        public isAcceptInvite(boolean isAccept) {
+            this.isAccept = isAccept;
+        }
+    }
+
+
     public static class printServerMessage implements Serializable {
         public static void printServerMessage(Object message) {
             if (message.getClass() == TextMessage.class)

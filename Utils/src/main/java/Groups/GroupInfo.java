@@ -1,22 +1,31 @@
 package Groups;
 
 
-import akka.routing.Router;
+import akka.actor.ActorRef;
 
+import java.util.LinkedList;
 import java.util.List;
+
+
 
 public class GroupInfo {
     private String groupName;
     private String admin;
-    private List<String> coAdmins;
-    private List<String> muteds;
-    private List<String> users;
-    private List<String> userPaths;
+    private List<String> coAdmins = new LinkedList<>();
+    private List<String> mutedusers= new LinkedList<>();
+    private List<String> users= new LinkedList<>();
+    private List<ActorRef> router = new LinkedList<>();
+    private List<String> totalUsers = new LinkedList<>();
 
-
-    public GroupInfo(String groupName, String admin) {
+    public GroupInfo(String groupName, String admin, ActorRef adminActor) {
         this.groupName = groupName;
         this.admin = admin;
+        this.router.add(adminActor);
+        this.totalUsers.add(admin);
+    }
+
+    public enum groupMode {
+        ADMIN, CO_ADMIN, MUTED, USER, NONE;
     }
 
     public String getGroupName() { return groupName; }
@@ -27,22 +36,42 @@ public class GroupInfo {
 
     public List<String> getCoAdmins() { return coAdmins; }
 
-    public List<String> getMuteds() { return muteds; }
+    public List<String> getMuteds() { return mutedusers; }
 
     public List<String> getUsers() { return users; }
 
-    public List<String> getUserPaths() { return userPaths; }
+    public List<String> getTotalUsers() { return totalUsers; }
+
+    public List<ActorRef> getRouter() { return router; }
+    public boolean addRoutee(ActorRef routee) { return router.add(routee); }
+    public boolean removeRoutee(ActorRef routee) { return router.remove(routee); }
 
     public boolean userHasPriviledges(String username){
-        if (admin == username || coAdmins.contains(username))
+        return admin.equals(username) || coAdmins.contains(username);
+    }
+
+    public groupMode getUserGroupMode(String username){
+        return  admin.equals(username)? groupMode.ADMIN:
+                coAdmins.contains(username)? groupMode.CO_ADMIN:
+                mutedusers.contains(username)? groupMode.MUTED:
+                users.contains(username)? groupMode.USER:
+                groupMode.NONE;
+    }
+
+    private boolean removeAdmin(String username){
+        if(admin.equals(username)){
+            this.admin = "";
             return true;
+        }
         return false;
     }
 
-    public boolean contains(String username){
-        if (admin == username || coAdmins.contains(username) || muteds.contains(username) || users.contains(username))
-            return true;
-        return false;
+    public boolean removeUsername(String username, groupMode type){
+        return  type.equals(groupMode.CO_ADMIN)? coAdmins.remove(username) :
+                type.equals(groupMode.MUTED)? mutedusers.remove(username) :
+                type.equals(groupMode.USER)? users.remove(username) :
+                type.equals(groupMode.ADMIN) && removeAdmin(username);
+
     }
 
     @Override
@@ -51,8 +80,10 @@ public class GroupInfo {
                 "groupName='" + groupName + '\'' +
                 ", admin='" + admin + '\'' +
                 ", coAdmins=" + coAdmins +
-                ", muteds=" + muteds +
+                ", mutedusers=" + mutedusers +
                 ", users=" + users +
+                ", router=" + router +
+                ", totalUsers=" + totalUsers +
                 '}';
     }
 }
