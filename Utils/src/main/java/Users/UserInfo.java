@@ -5,22 +5,19 @@ import akka.actor.ActorRef;
 import java.util.List;
 
 public class UserInfo{
+    private String userName;
     private boolean isAdmin;
     private List<String> groups;
     ActorRef actor;
 
-    public UserInfo(boolean isAdmin, List<String> groups, ActorRef actor) {
-        this.isAdmin = isAdmin;
+    public UserInfo(String userName, List<String> groups, ActorRef actor) {
+        this.userName = userName;
         this.groups = groups;
         this.actor = actor;
     }
 
-    public boolean isAdmin() {
-        return isAdmin;
-    }
-
-    public void setAdmin(boolean admin) {
-        isAdmin = admin;
+    public String getUserName() {
+        return userName;
     }
 
     public List<String> getGroups() {

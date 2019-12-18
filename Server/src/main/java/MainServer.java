@@ -15,7 +15,7 @@ public class MainServer {
         // Creating environment
         ActorSystem system = ActorSystem.create(Constants.SERVER, ConfigFactory.load());
 
-        // Create an actor
+        // Create an MANAGER actor
         system.actorOf(Props.create(Manager.class), Constants.MANAGER);
 
 //        System.out.println("ENTER to terminate");
