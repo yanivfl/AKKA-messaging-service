@@ -9,7 +9,10 @@ import akka.util.Timeout;
 import scala.concurrent.Await;
 import scala.concurrent.Future;
 
-import java.io.File;
+import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.Scanner;
@@ -69,20 +72,25 @@ import java.util.Scanner;
          **/
 
         public static void userCommandSwitch(String[] command) {
-            switch (command[1]) {
+
+            switch (command[1]) { // /user disconnect
                 case "disconnect":
-                    onDisconnect();
-                    break;
+                    if(command.length ==2){
+                        onDisconnect();
+                        return;
+                    }
                 case "text":
-                    String msg = extaractMsg(command);
-                    onChatTextualMessage(command[2], msg);
-                    break;
-                case "file":  //TODO:
-                    System.out.println("Need to implement");
-                    break;
-                default:
-                    System.out.println("The User feature you requested does not exist, please try again");
+                    if (command.length > 3) { // /user text targer msg
+                        onChatTextualMessage(command[2], extaractMsg(command));
+                        return;
+                    }
+                case "file":
+                    if (command.length == 4) { // /user text target filePath
+                        onChatBinaryMessage(command[2], command[3]);
+                        return;
+                    }
             }
+            System.out.println("The User feature you requested does not exist, please try again");
         }
 
         public static void groupCommandSwitch(String[] command) {
@@ -184,29 +192,38 @@ import java.util.Scanner;
                 targetactor.tell(new TextMessage(Constants.PRINTING("user", clientUserName, msg)), clientRef);
         }
 
-        private static void onChatBinaryMessage(String targetname, String filepath) {
-            ActorRef targetactor = getTargetActorRef(targetname);
-            if (targetactor!=null){
-                File file = new File(filepath);
-                if(file.exists() && !file.isDirectory()){
-
-                    try{
-
-                    }catch (Exception e){
-                        e.printStackTrace();
-                    } finally {
-
+        private static void onChatBinaryMessage(String targetName, String filePath)  {
+            ActorRef targetactor = getTargetActorRef(targetName); //prints error message inside
+            if (targetactor==null) { return;}
+            File file = new File(filePath);
+            if(!file.exists() || file.isDirectory()) {
+                System.out.println(Constants.NOT_EXIST(filePath));
+                return;
+            }
+            try{
+                InputStream inputStream =null;
+                try {
+                    byte[] buffer = new byte[Constants.BUFFER_SIZE];
+                    inputStream = new BufferedInputStream(new FileInputStream(filePath));
+                    String fileName =Paths.get(filePath).getFileName().toString();
+                    int bytesRead;
+                    int iteration =0;
+                    while ((bytesRead = inputStream.read(buffer)) >= 0) {
+                        targetactor.tell(new FileMessage(clientUserName, fileName, buffer, bytesRead, iteration,  false), clientRef);
+                        iteration++;
                     }
-
+                    targetactor.tell(new FileMessage(clientUserName ,fileName, buffer, bytesRead, iteration, true), clientRef);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }finally {
+                    inputStream.close();
                 }
-                else{
-                    Constants.NOT_EXIST(filepath);
-                }
-
+            } catch (IOException e){
+                e.printStackTrace();
             }
 
-
         }
+
 
         private static void onGroupCreate(String groupname) {
             manager.tell(new GroupCreateMessage(groupname, clientUserName), clientRef);

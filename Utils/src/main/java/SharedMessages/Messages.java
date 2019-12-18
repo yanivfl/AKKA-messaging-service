@@ -57,20 +57,21 @@ public class Messages implements Serializable {
         }
     }
 
-    public static class UserMessage implements Serializable {
-        public final String sourcename;
-        public final String targetname;
-        public final String message;
-
-        public UserMessage(String sourcename, String targetname, String message) {
-            this.sourcename = sourcename;
-            this.targetname = targetname;
-            this.message = message;
-        }
-    }
 
     public static class FileMessage implements Serializable {
-        public FileMessage() {
+        public final String userName;
+        public final String fileName;
+        public final byte[] buffer;
+        public final int bytesRead;
+        public final boolean isDone;
+        public final int iteration;
+        public FileMessage(String userName,String fileName, byte[] buffer, int bytesRead, int iteration, boolean isDone) {
+            this.userName = userName;
+            this.fileName = fileName;
+            this.buffer = buffer;
+            this.bytesRead = bytesRead;
+            this.isDone = isDone;
+            this.iteration = iteration;
         }
     }
 

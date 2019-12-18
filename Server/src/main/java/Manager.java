@@ -66,7 +66,7 @@ public class Manager extends AbstractActor {
     }
 
     private void isUserExist(isUserExistMessage msg) {
-        logger.info("Got a IsUserExitsMessage");
+        logger.info("Got a IsUserExistMessage");
         if(usersMap.containsKey(msg.targetusername)) {
             ActorRef targetActor = usersMap.get(msg.targetusername).getActor();
             getSender().tell(new AddressMessage(targetActor), ActorRef.noSender());
