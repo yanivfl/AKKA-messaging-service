@@ -4,14 +4,15 @@ import SharedMessages.Messages;
 import akka.actor.ActorCell;
 import akka.actor.ActorRef;
 import akka.routing.*;
+import com.fasterxml.uuid.Generators;
 
 import java.util.LinkedList;
 import java.util.List;
+import java.util.UUID;
 
 public class GroupRouter {
 
     private List<String> paths = new LinkedList<>();
-    private long uniqueID = 0;
 
 
     public GroupRouter(){
@@ -27,7 +28,8 @@ public class GroupRouter {
     }
 
     public void broadcastMessage(ActorCell context, Messages.TextMessage msg ){
-        ActorRef broadcastRouter = context.actorOf(new ConsistentHashingGroup(paths).props(), "BroadcastingRouter"+ uniqueID++);
+        UUID uuid = Generators.timeBasedGenerator().generate();
+        ActorRef broadcastRouter = context.actorOf(new ConsistentHashingGroup(paths).props(), "BroadcastingRouter"+ uuid);
         broadcastRouter.tell(new Broadcast(msg), ActorRef.noSender());
     }
 

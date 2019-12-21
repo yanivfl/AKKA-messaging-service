@@ -109,7 +109,7 @@ public class Manager extends AbstractActor {
         switch (group.getUserGroupMode(username)){
             case ADMIN:
                 deleteGroup = true;
-                groupRouter.broadcastMessage((ActorCell) getContext(), new TextMessage(groupname +" admin has closed " + groupname +"!"));
+                groupRouter.broadcastMessage((ActorCell) getContext(), new TextMessage(username +" admin has closed " + groupname +"!"));
 
             case CO_ADMIN:
                 groupRouter.broadcastMessage((ActorCell) getContext(), new TextMessage(username +" is removed from co-admin list in " + groupname));
