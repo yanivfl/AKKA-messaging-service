@@ -7,7 +7,7 @@ import akka.event.LoggingAdapter;
 
 import java.io.*;
 import java.nio.file.Paths;
-import java.util.Scanner;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 
 public class ClientActor extends AbstractActor {
@@ -15,7 +15,20 @@ public class ClientActor extends AbstractActor {
     private final ActorRef myActorRef = this.self();
     public final ActorSelection manager = getContext().actorSelection(Constants.PATH_TO_MANAGER);
     private LoggingAdapter logger = Logging.getLogger(getContext().system(), this);
+    private AtomicBoolean isInviteAnswer;
+    private AtomicBoolean expectingInviteAnswer;
+    private Object waitingObject;
 
+    public ClientActor(AtomicBoolean isInviteAnswer, AtomicBoolean expectingInviteAnswer, Object waitingObject) {
+        this.isInviteAnswer = isInviteAnswer;
+        this.waitingObject = waitingObject;
+        this.expectingInviteAnswer = expectingInviteAnswer;
+    }
+
+
+    static Props props(AtomicBoolean isInviteAnswer, AtomicBoolean expectingInviteAnswer, Object waitingObject) {
+        return Props.create(ClientActor.class, () -> new ClientActor(isInviteAnswer, expectingInviteAnswer, waitingObject));
+    }
 
     @Override
     public Receive createReceive() {
@@ -81,14 +94,15 @@ public class ClientActor extends AbstractActor {
 
     private void onGroupInviteRequestReply(GroupInviteRequestReply reqMsg) {
         System.out.println(reqMsg.text);
-        Scanner scanner = new Scanner(System.in);
-        String userInput = scanner.nextLine();
-        boolean isAccept = userInput.
-                toLowerCase().
-                equals("yes".toLowerCase());
-        scanner.close();
-        getSender().tell(new isAcceptInvite(isAccept), myActorRef);
-
-
+        expectingInviteAnswer.set(true);
+        try{
+            synchronized (waitingObject){
+                waitingObject.wait();
+            }
+        } catch (InterruptedException e){
+            e.printStackTrace();
+        } finally {
+            getSender().tell(new isAcceptInvite(isInviteAnswer.get()), myActorRef);
+        }
     }
 }

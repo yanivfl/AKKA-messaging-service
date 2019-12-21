@@ -1,8 +1,6 @@
 import SharedMessages.Messages.*;
 import Users.Constants;
 import akka.actor.*;
-import akka.event.Logging;
-import akka.event.LoggingAdapter;
 import akka.pattern.Patterns;
 import com.typesafe.config.ConfigFactory;
 import akka.util.Timeout;
@@ -10,12 +8,11 @@ import scala.concurrent.Await;
 import scala.concurrent.Future;
 
 import java.io.*;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.Scanner;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 
 //final Config config = ConfigFactory.load().withValue("akka.log-dead-letters", ConfigValueFactory.fromAnyRef("off"));
@@ -28,7 +25,9 @@ import java.util.Scanner;
         private static boolean connect;
         private static String clientUserName = "";
         private static final Timeout timeout = Timeout.create(Duration.ofSeconds(1));
-
+        private static AtomicBoolean isInviteAnswer = new AtomicBoolean(false);
+        private static AtomicBoolean expectingInviteAnswer = new AtomicBoolean(false);
+        private static final Object waitingObject = new Object();
 
 
         public static void main(String[] args) {
@@ -51,6 +50,11 @@ import java.util.Scanner;
                 userInput = scanner.nextLine();
                 command = userInput.split("\\s+");
 
+                if(expectingInviteAnswer.get()){
+                    getInviteAnswer(command);
+                    continue;
+                }
+
                 switch (command[0]) {
                     case "/user":
                         userCommandSwitch(command);
@@ -72,7 +76,32 @@ import java.util.Scanner;
          * Auxiliary methods
          **/
 
-        public static void userCommandSwitch(String[] command) {
+        private static void getInviteAnswer(String[] command){
+            if(command.length != 1){
+                System.out.println("Answer must be \"yes\" or \"no\" (more than 1 word)");
+                return;
+            }
+            switch (command[0]){
+                case "yes":
+                case "no":
+                    isInviteAnswer.set(
+                            command[0].equals("yes")
+                    );
+                    expectingInviteAnswer.set(false);
+                    try {
+                        synchronized (waitingObject) {
+                            waitingObject.notifyAll();
+                        }
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                    return;
+                default:
+                    System.out.println("Answer must be \"yes\" or \"no\" ");
+            }
+        }
+
+        private static void userCommandSwitch(String[] command) {
 
             switch (command[1]) { // /user disconnect
                 case "disconnect":
@@ -94,39 +123,55 @@ import java.util.Scanner;
             System.out.println("The User feature you requested does not exist, please try again");
         }
 
-        public static void groupCommandSwitch(String[] command) {
-        switch (command[1]) {
-            case "create":
-                onGroupCreate(command[2]);
-                break;
-            case "leave":
-                onGroupLeave(command[2]);
-                break;
-            case "invite":
-                onGroupInvite(command[2], command[3]);
-                break;
-            case "send":
-                System.out.println("send not implement");
-                break;
-            case "remove":
-                System.out.println("remove not implement");
-                break;
-            case "mute":
-                System.out.println("mute not implement");
-                break;
-            case "unmute":
-                System.out.println("unmute not implement");
-                break;
-            case "coadmin":
-                coadminCommandSwitch(command);
-                break;
-            default:
-                System.out.println("The Group feature you requested does not exist, please try again");
-        }
+        private static void groupCommandSwitch(String[] command) {
+            switch (command[1]) {
+                case "create":
+                    if(command.length ==3){
+                        onGroupCreate(command[2]);
+                        return;
+                    }
+                case "leave":
+                    if(command.length ==3){
+                        onGroupLeave(command[2]);
+                        return;
+                    }
+                case "user":
+                    groupUserCommandSwitch(command);
+                    return;
+                case "coadmin":
+                    if(command.length ==3){
+                        coadminCommandSwitch(command);
+                        return;
+                    }
+            }
+            System.out.println("The Group feature you requested does not exist, please try again");
         }
 
-        public static void coadminCommandSwitch(String[] command) {
-            switch (command[3]) {
+        private static void groupUserCommandSwitch(String[] command) {
+            switch (command[2]) {
+                case "invite":
+                    if(command.length ==5){
+                        onGroupInvite(command[3], command[4]);
+                        return;
+                    }
+                case "send":
+                    System.out.println("send not implement");
+                    break;
+                case "remove":
+                    System.out.println("remove not implement");
+                    break;
+                case "mute":
+                    System.out.println("mute not implement");
+                    break;
+                case "unmute":
+                    System.out.println("unmute not implement");
+                    break;
+            }
+            System.out.println("The Group user feature you requested does not exist, please try again");
+        }
+
+        private static void coadminCommandSwitch(String[] command) {
+            switch (command[2]) {
                 case "add":
                     System.out.println("coadmin add not implement");
                     break;
@@ -138,7 +183,7 @@ import java.util.Scanner;
             }
         }
 
-        public static String extaractMsg(String[] command) {
+        private static String extaractMsg(String[] command) {
             String[] temp = Arrays.copyOfRange(command, 3, command.length);
             String msg = Arrays.toString(temp);
             msg = msg.substring(1, msg.length() - 1).replace(",", "");
@@ -149,7 +194,7 @@ import java.util.Scanner;
             /**
              * Connecting a user to the server - clientActor send Ask message to manager to connect
              **/
-            clientRef = system.actorOf(Props.create(ClientActor.class), Constants.CLIENT +"-"+ username);   // Creating Client actor
+            clientRef =  system.actorOf(ClientActor.props(isInviteAnswer, expectingInviteAnswer, waitingObject),  Constants.CLIENT +"-"+ username);   // Creating Client actor
             ConnectionMessage connMsg = new ConnectionMessage(username, clientRef);
             Future<Object> rt = Patterns.ask(manager, connMsg, timeout);
             try {

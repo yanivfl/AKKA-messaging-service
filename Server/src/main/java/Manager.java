@@ -1,12 +1,10 @@
+import Groups.GroupRouter;
 import SharedMessages.Messages.*;
 import Users.Constants;
 import Users.UserInfo;
 import Groups.GroupInfo;
 
-import akka.actor.AbstractActor;
-import akka.actor.ActorRef;
-import akka.actor.PoisonPill;
-import akka.actor.Props;
+import akka.actor.*;
 import akka.event.Logging;
 import akka.event.LoggingAdapter;
 import akka.pattern.Patterns;
@@ -87,6 +85,7 @@ public class Manager extends AbstractActor {
             usersMap.get(createMsg.username).getGroups().add(createMsg.groupname);
             logger.info("Debug- the usersgroups map:\n " + groupsMap.toString());
             getSender().tell(new TextMessage(Constants.GROUP_CREATE_SUCC(createMsg.groupname)), ActorRef.noSender());
+            logger.info("admin path is::\n " +  getSender().path().toString());
         } else {
             logger.info(Constants.GROUP_CREATE_FAIL(createMsg.groupname));
             getSender().tell(new ErrorMessage(Constants.GROUP_CREATE_FAIL(createMsg.groupname)), ActorRef.noSender());
@@ -106,27 +105,26 @@ public class Manager extends AbstractActor {
         if (!ValidateIsGroupContainsUser(group, username, true)) return;
 
         boolean deleteGroup = false;
-        Iterable<ActorRef> routees = group.getRouter();
-        ActorRef broadcastRouter = getContext().actorOf(Props.empty().withRouter(RoundRobinRouter.create(routees)));
+        GroupRouter groupRouter = group.getGroupRouter();
         switch (group.getUserGroupMode(username)){
             case ADMIN:
                 deleteGroup = true;
-                broadcastRouter.tell(new TextMessage(groupname +" admin has closed " + groupname +"!"), ActorRef.noSender());
+                groupRouter.broadcastMessage((ActorCell) getContext(), new TextMessage(groupname +" admin has closed " + groupname +"!"));
 
             case CO_ADMIN:
-                broadcastRouter.tell(new TextMessage(username +" is removed from co-admin list in " + groupname), ActorRef.noSender());
+                groupRouter.broadcastMessage((ActorCell) getContext(), new TextMessage(username +" is removed from co-admin list in " + groupname));
 
             case MUTED:
             case USER:
                 removeUserFromGroup(groupname, username, group);
-                broadcastRouter.tell(new TextMessage(username +" has left " + groupname + "!"), ActorRef.noSender());
+                groupRouter.broadcastMessage((ActorCell) getContext(), new TextMessage(username +" has left " + groupname + "!"));
                 break;
             case NONE:
                 logger.info("DEBUG - Manager should not Reach this point!");
                 return;
         }
         if(deleteGroup){
-            for(String userName : group.getTotalUsers()){ //TODO remove total users outside the scope. will throw exception
+            for(String userName : group.getAllUsers()){ //TODO remove total users outside the scope. will throw exception
                 removeUserFromGroup(groupname, userName, group);
             }
             groupsMap.remove(groupname);
@@ -136,8 +134,7 @@ public class Manager extends AbstractActor {
     private void removeUserFromGroup(String groupname, String username, GroupInfo group) {
         logger.info("removing " + username + " from " + groupname);
         group.removeUsername(username, group.getUserGroupMode(username));
-        group.removeRoutee(usersMap.get(username).getActor());
-        group.getTotalUsers().remove(username);
+        group.getGroupRouter().removeRoutee(usersMap.get(username).getActor());
         usersMap.get(username).getGroups().remove(groupname);
         logger.info("group after remove is: " + group.toString());
     }
@@ -159,7 +156,7 @@ public class Manager extends AbstractActor {
         logger.info("sends invite request to " + targetusername);
         String msg = "You have been invited to " + groupname + ", Accept?";
         ActorRef targetActor = usersMap.get(targetusername).getActor();
-        final Timeout timeout = Timeout.create(Duration.ofSeconds(1));
+        final Timeout timeout = Timeout.create(Duration.ofSeconds(60)); //give user 1 minute to answer
         Future<Object> rt = Patterns.ask(targetActor, new GroupInviteRequestReply(groupname, sourceusername, msg), timeout);
         try {
             Object result = Await.result(rt, timeout.duration());
@@ -167,21 +164,23 @@ public class Manager extends AbstractActor {
                 if(((isAcceptInvite)result).isAccept){
                     logger.info("adding " + targetusername + " to " + groupname);
                     addUserToGroup(targetusername, group, targetActor);
-                    targetActor.tell(new TextMessage("Welcome to" + groupname + "!"), ActorRef.noSender());
+                    targetActor.tell(new TextMessage("Welcome to " + groupname + "!"), ActorRef.noSender());
                     logger.info("group after invite is: " + group.toString());
                 }
-                logger.info(targetusername + " declined group invitation. after invite is: " + group.toString());
+                else {
+                    logger.info(targetusername + " declined group invitation. after invite is: " + group.toString());
+                }
             }
         } catch (Exception e) {
-            logger.info(Constants.SERVER_IS_OFFLINE_DISCONN);
-            getSender().tell(PoisonPill.getInstance(), ActorRef.noSender());
+            logger.info("took to much time for user to answer");
+            getSender().tell(new ErrorMessage(targetusername + " did not answer on time."), ActorRef.noSender());
         }
     }
 
     private void addUserToGroup(String targetusername, GroupInfo group, ActorRef targetActor) {
         group.getUsers().add(targetusername);
-        group.getTotalUsers().add(targetusername);
-        group.getRouter().add(targetActor);
+        group.getGroupRouter().addRoutee(targetActor);
+        logger.info("added " + targetusername + " to group " + group.toString() + " with path " + targetActor.path().toString() );
     }
 
 
@@ -200,13 +199,7 @@ public class Manager extends AbstractActor {
         }
         return null;
     }
-    //        return  usersMap
-////                .entrySet()
-////                .stream()
-////                .filter(entry -> actorRef.equals(entry.getValue().getActor()))
-////                .map(ConcurrentMap.Entry::getValue)
-////                .findFirst()
-////                .get();
+
 
     private String getUserName(UserInfo userInfo) { //checked! works
         return usersMap
@@ -223,7 +216,7 @@ public class Manager extends AbstractActor {
 
 //****************************Validators**********************************
     private boolean ValidateIsGroupContainsUser(GroupInfo group, String username, boolean expectedContained){
-        boolean isContained =group.getTotalUsers().contains(username);
+        boolean isContained = !group.getUserGroupMode(username).equals(GroupInfo.groupMode.NONE);
         if(isContained && !expectedContained){
             logger.info(Constants.GROUP_TARGET_ALREADY_BELONGS(username, group.getGroupName()));
             getSender().tell(new ErrorMessage(Constants.GROUP_TARGET_ALREADY_BELONGS(username, group.getGroupName())), ActorRef.noSender());

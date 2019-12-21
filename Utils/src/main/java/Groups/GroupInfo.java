@@ -2,6 +2,10 @@ package Groups;
 
 
 import akka.actor.ActorRef;
+import akka.routing.ActorRefRoutee;
+import akka.routing.RoundRobinRoutingLogic;
+import akka.routing.Routee;
+import akka.routing.Router;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -14,14 +18,13 @@ public class GroupInfo {
     private List<String> coAdmins = new LinkedList<>();
     private List<String> mutedusers= new LinkedList<>();
     private List<String> users= new LinkedList<>();
-    private List<ActorRef> router = new LinkedList<>();
-    private List<String> totalUsers = new LinkedList<>();
+    private GroupRouter groupRouter;
 
     public GroupInfo(String groupName, String admin, ActorRef adminActor) {
         this.groupName = groupName;
         this.admin = admin;
-        this.router.add(adminActor);
-        this.totalUsers.add(admin);
+        this.groupRouter = new GroupRouter();
+        groupRouter.addRoutee(adminActor);
     }
 
     public enum groupMode {
@@ -40,11 +43,17 @@ public class GroupInfo {
 
     public List<String> getUsers() { return users; }
 
-    public List<String> getTotalUsers() { return totalUsers; }
+    public List<String> getAllUsers() {
+        List<String> allUsers = new LinkedList<>();
+        if(!admin.equals(""))
+            allUsers.add(admin);
+        allUsers.addAll(coAdmins);
+        allUsers.addAll(mutedusers);
+        allUsers.addAll(users);
+        return allUsers;
+    }
 
-    public List<ActorRef> getRouter() { return router; }
-    public boolean addRoutee(ActorRef routee) { return router.add(routee); }
-    public boolean removeRoutee(ActorRef routee) { return router.remove(routee); }
+    public GroupRouter getGroupRouter() { return groupRouter; }
 
     public boolean userHasPriviledges(String username){
         return admin.equals(username) || coAdmins.contains(username);
@@ -82,8 +91,7 @@ public class GroupInfo {
                 ", coAdmins=" + coAdmins +
                 ", mutedusers=" + mutedusers +
                 ", users=" + users +
-                ", router=" + router +
-                ", totalUsers=" + totalUsers +
+                ", groupRouter=" + groupRouter +
                 '}';
     }
 }
