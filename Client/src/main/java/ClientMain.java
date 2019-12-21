@@ -10,6 +10,7 @@ import scala.concurrent.Future;
 
 import java.io.*;
 import java.nio.channels.Channel;
+import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.Arrays;
@@ -249,22 +250,12 @@ import java.util.concurrent.atomic.AtomicBoolean;
                 return;
             }
 
-            byte[] buffer = new byte[Constants.BUFFER_SIZE];
             String fileName =Paths.get(filePath).getFileName().toString();
-            String outputFile = SharedFucntions.getTargetFilePath(clientUserName,fileName);
-
-            try (
-                    InputStream inputStream = new FileInputStream(filePath);
-                    OutputStream outputStream = new FileOutputStream(outputFile);
-            ) {
-                int bytesRead;
-                while ((bytesRead = inputStream.read(buffer)) != -1) {
-                    targetactor.tell(new FileMessage(clientUserName, fileName, buffer, bytesRead, outputStream, false), clientRef);
-                }
-                targetactor.tell(new FileMessage(clientUserName, fileName, buffer, bytesRead, outputStream, true), clientRef);
-                Thread.sleep(20000); //TODO change to ask
-            } catch (IOException | InterruptedException ex) {
-                ex.printStackTrace();
+            try{
+                byte[] buffer = Files.readAllBytes(Paths.get(filePath));
+                targetactor.tell(new AllBytesFileMessage(clientUserName, fileName, buffer), clientRef);
+            } catch (IOException e) {
+                e.printStackTrace();
             }
         }
 

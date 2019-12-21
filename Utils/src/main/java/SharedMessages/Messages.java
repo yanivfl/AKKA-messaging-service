@@ -76,6 +76,17 @@ public class Messages implements Serializable {
         }
     }
 
+    public static class AllBytesFileMessage implements Serializable {
+        public final String userName;
+        public final String fileName;
+        public final byte[] buffer;
+        public AllBytesFileMessage(String userName, String fileName, byte[] buffer) {
+            this.userName = userName;
+            this.fileName = fileName;
+            this.buffer = buffer;
+        }
+    }
+
     public static class GroupCreateMessage implements Serializable {
         public final String username;
         public final String groupname;

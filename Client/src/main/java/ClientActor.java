@@ -35,25 +35,21 @@ public class ClientActor extends AbstractActor {
     public Receive createReceive() {
         return receiveBuilder()
                 .match(TextMessage.class, this::onTextMessage)
-                .match(FileMessage.class, this::onFileMessage)
+                .match(AllBytesFileMessage.class, this::AllBytesFileMessage)
                 .match(ErrorMessage.class, this::onErrorMessage)
                 .match(GroupInviteRequestReply.class, this::onGroupInviteRequestReply)
                 .build();
     }
 
 
-    private void onFileMessage(FileMessage fileMsg) {
-        String outputFile = SharedFucntions.getTargetFilePath(fileMsg.userName,fileMsg.fileName);
-        if(fileMsg.isDone){
-            //[<time>][user][<source>] File received: <targetfilepath>
-            System.out.println(Constants.PRINTING("user", fileMsg.userName, "File received: " + outputFile));
-            return;
+    private void AllBytesFileMessage(AllBytesFileMessage abfileMsg) {
+        String outputFile = SharedFucntions.getTargetFilePath(abfileMsg.userName,abfileMsg.fileName);
+        try (FileOutputStream stream = new FileOutputStream(outputFile)) {
+            stream.write(abfileMsg.buffer);
+            System.out.println(Constants.PRINTING("user", abfileMsg.userName, "File received: " + outputFile));
+        }catch (IOException e) {
+            e.printStackTrace();
         }
-        try {
-            fileMsg.outputStream.write(fileMsg.buffer, 0, fileMsg.bytesRead);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
     }
 
     private void onTextMessage(TextMessage textMsg) {
