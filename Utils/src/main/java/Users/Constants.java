@@ -4,7 +4,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 
 public class Constants{
-    public static final int BUFFER_SIZE = 8192; // 8KB=BUFFER_SIZE
+    public static final int BUFFER_SIZE = 4096; // 4KB=BUFFER_SIZE
     public static final String CHAT_DOWNLOADS_DIR = "Chat_Downloads";
     public static final String MANAGER = "Manager";
     public static final String SERVER= "WhatsupServer";

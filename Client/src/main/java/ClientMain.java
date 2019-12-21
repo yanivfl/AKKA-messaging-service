@@ -1,5 +1,6 @@
 import SharedMessages.Messages.*;
 import Users.Constants;
+import Users.SharedFucntions;
 import akka.actor.*;
 import akka.pattern.Patterns;
 import com.typesafe.config.ConfigFactory;
@@ -8,6 +9,7 @@ import scala.concurrent.Await;
 import scala.concurrent.Future;
 
 import java.io.*;
+import java.nio.channels.Channel;
 import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.Arrays;
@@ -246,28 +248,24 @@ import java.util.concurrent.atomic.AtomicBoolean;
                 System.out.println(Constants.NOT_EXIST(filePath));
                 return;
             }
-            try{
-                InputStream inputStream =null;
-                try {
-                    byte[] buffer = new byte[Constants.BUFFER_SIZE];
-                    inputStream = new BufferedInputStream(new FileInputStream(filePath));
-                    String fileName =Paths.get(filePath).getFileName().toString();
-                    int bytesRead;
-                    int iteration =0;
-                    while ((bytesRead = inputStream.read(buffer)) >= 0) {
-                        targetactor.tell(new FileMessage(clientUserName, fileName, buffer, bytesRead, iteration,  false), clientRef);
-                        iteration++;
-                    }
-                    targetactor.tell(new FileMessage(clientUserName ,fileName, buffer, bytesRead, iteration, true), clientRef);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }finally {
-                    inputStream.close();
-                }
-            } catch (IOException e){
-                e.printStackTrace();
-            }
 
+            byte[] buffer = new byte[Constants.BUFFER_SIZE];
+            String fileName =Paths.get(filePath).getFileName().toString();
+            String outputFile = SharedFucntions.getTargetFilePath(clientUserName,fileName);
+
+            try (
+                    InputStream inputStream = new FileInputStream(filePath);
+                    OutputStream outputStream = new FileOutputStream(outputFile);
+            ) {
+                int bytesRead;
+                while ((bytesRead = inputStream.read(buffer)) != -1) {
+                    targetactor.tell(new FileMessage(clientUserName, fileName, buffer, bytesRead, outputStream, false), clientRef);
+                }
+                targetactor.tell(new FileMessage(clientUserName, fileName, buffer, bytesRead, outputStream, true), clientRef);
+                Thread.sleep(20000); //TODO change to ask
+            } catch (IOException | InterruptedException ex) {
+                ex.printStackTrace();
+            }
         }
 
 

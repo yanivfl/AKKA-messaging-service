@@ -2,6 +2,7 @@ package SharedMessages;
 
 import akka.actor.ActorRef;
 
+import java.io.OutputStream;
 import java.io.Serializable;
 
 public class Messages implements Serializable {
@@ -64,14 +65,14 @@ public class Messages implements Serializable {
         public final byte[] buffer;
         public final int bytesRead;
         public final boolean isDone;
-        public final int iteration;
-        public FileMessage(String userName,String fileName, byte[] buffer, int bytesRead, int iteration, boolean isDone) {
+        public final OutputStream outputStream;
+        public FileMessage(String userName, String fileName, byte[] buffer, int bytesRead, OutputStream outputStream, boolean isDone) {
             this.userName = userName;
             this.fileName = fileName;
             this.buffer = buffer;
             this.bytesRead = bytesRead;
             this.isDone = isDone;
-            this.iteration = iteration;
+            this.outputStream = outputStream;
         }
     }
 
