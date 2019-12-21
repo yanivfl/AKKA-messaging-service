@@ -36,7 +36,33 @@ public class Manager extends AbstractActor {
                 .match(GroupCreateMessage.class,this::onGroupCreate)
                 .match(GroupLeaveMessage.class, this::onGroupLeave)
                 .match(GroupInviteMessage.class, this::onGroupInvite)
+                .match(GroupSendTextMessage.class, this::onGroupSendTextMessage)
+                .match(GroupSendFileMessage.class, this::onGroupSendFileMessage)
                 .build();
+    }
+
+    private void onGroupSendTextMessage(GroupSendTextMessage groupTextMessage){
+        logger.info("got a group send text message!");
+        if(!ValidateIsGroupExist(groupTextMessage.groupname, true)) return;
+        if(!ValidateIsGroupContainsUser(groupsMap.get(groupTextMessage.groupname),
+                groupTextMessage.sourcename, true)) return;
+
+        groupsMap.get(groupTextMessage.groupname).
+                getGroupRouter().
+                broadcastMessage((ActorCell) getContext(), new TextMessage(groupTextMessage.message));
+        }
+
+    private void onGroupSendFileMessage(GroupSendFileMessage groupFileMessage){
+        logger.info("got a group send file message!");
+        if(!ValidateIsGroupExist(groupFileMessage.groupname, true)) return;
+        if(!ValidateIsGroupContainsUser(groupsMap.get(groupFileMessage.groupname),
+                groupFileMessage.sourcename, true)) return;
+
+        groupsMap.get(groupFileMessage.groupname).
+                getGroupRouter().
+                broadcastFile((ActorCell) getContext(),
+                        new AllBytesFileMessage(groupFileMessage.sourcename, groupFileMessage.fileName,
+                                groupFileMessage.groupname, groupFileMessage.buffer));
     }
 
     private void onConnect(ConnectionMessage connectMsg) {

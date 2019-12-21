@@ -114,7 +114,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
                     }
                 case "text":
                     if (command.length > 3) { // /user text targer msg
-                        onChatTextualMessage(command[2], extaractMsg(command));
+                        onChatTextualMessage(command[2], extaractMsg(command, 3));
                         return;
                     }
                 case "file":
@@ -142,12 +142,47 @@ import java.util.concurrent.atomic.AtomicBoolean;
                     groupUserCommandSwitch(command);
                     return;
                 case "coadmin":
-                    if(command.length ==3){
-                        coadminCommandSwitch(command);
+                    coadminCommandSwitch(command);
+                    return;
+                case "send":
+                    groupSendCommandSwitch(command);
+                    return;
+            }
+
+            System.out.println("The Group feature you requested does not exist, please try again");
+        }
+
+        private static void groupSendCommandSwitch(String[] command) {
+            switch (command[2]) {
+                case "text":
+                    if(command.length >= 5){
+                        String groupName = command[3];
+                        String msg = extaractMsg(command, 4);
+                        manager.tell(new GroupSendTextMessage(groupName, clientUserName,
+                                Constants.PRINTING(groupName, clientUserName, msg)), clientRef);
+                        return;
+                    }
+                case "file":
+                    if(command.length == 5){
+                        String groupName = command[3];
+                        String filePath = command[4];
+                        File file = new File(filePath);
+                        if(!file.exists() || file.isDirectory()) {
+                            System.out.println(Constants.NOT_EXIST(filePath));
+                            return;
+                        }
+
+                        String fileName =Paths.get(filePath).getFileName().toString();
+                        try{
+                            byte[] buffer = Files.readAllBytes(Paths.get(filePath));
+                            manager.tell(new GroupSendFileMessage(groupName, clientUserName, fileName, buffer), clientRef);
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
                         return;
                     }
             }
-            System.out.println("The Group feature you requested does not exist, please try again");
+            System.out.println("The Group send feature you requested does not exist, please try again");
         }
 
         private static void groupUserCommandSwitch(String[] command) {
@@ -157,9 +192,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
                         onGroupInvite(command[3], command[4]);
                         return;
                     }
-                case "send":
-                    System.out.println("send not implement");
-                    break;
                 case "remove":
                     System.out.println("remove not implement");
                     break;
@@ -186,8 +218,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
             }
         }
 
-        private static String extaractMsg(String[] command) {
-            String[] temp = Arrays.copyOfRange(command, 3, command.length);
+        private static String extaractMsg(String[] command, int indexMessage) {
+            String[] temp = Arrays.copyOfRange(command, indexMessage, command.length);
             String msg = Arrays.toString(temp);
             msg = msg.substring(1, msg.length() - 1).replace(",", "");
             return msg;
@@ -238,7 +270,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
         private static void onChatTextualMessage(String targetname, String msg) {
             ActorRef targetactor = getTargetActorRef(targetname);
             if (targetactor!=null)
-                targetactor.tell(new TextMessage(Constants.PRINTING("user", clientUserName, msg)), clientRef);
+                targetactor.tell(new TextMessage(Constants.PRINTING(Constants.ACTION_USER, clientUserName, msg)), clientRef);
         }
 
         private static void onChatBinaryMessage(String targetName, String filePath)  {
@@ -253,7 +285,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
             String fileName =Paths.get(filePath).getFileName().toString();
             try{
                 byte[] buffer = Files.readAllBytes(Paths.get(filePath));
-                targetactor.tell(new AllBytesFileMessage(clientUserName, fileName, buffer), clientRef);
+                targetactor.tell(new AllBytesFileMessage(clientUserName, fileName, Constants.ACTION_USER, buffer), clientRef);
             } catch (IOException e) {
                 e.printStackTrace();
             }

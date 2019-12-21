@@ -46,7 +46,7 @@ public class ClientActor extends AbstractActor {
         String outputFile = SharedFucntions.getTargetFilePath(abfileMsg.userName,abfileMsg.fileName);
         try (FileOutputStream stream = new FileOutputStream(outputFile)) {
             stream.write(abfileMsg.buffer);
-            System.out.println(Constants.PRINTING("user", abfileMsg.userName, "File received: " + outputFile));
+            System.out.println(Constants.PRINTING(abfileMsg.action, abfileMsg.userName, "File received: " + outputFile));
         }catch (IOException e) {
             e.printStackTrace();
         }

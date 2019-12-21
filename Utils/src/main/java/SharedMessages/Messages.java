@@ -79,11 +79,14 @@ public class Messages implements Serializable {
     public static class AllBytesFileMessage implements Serializable {
         public final String userName;
         public final String fileName;
+        public final String action;
         public final byte[] buffer;
-        public AllBytesFileMessage(String userName, String fileName, byte[] buffer) {
+
+        public AllBytesFileMessage(String userName, String fileName, String action, byte[] buffer) {
             this.userName = userName;
             this.fileName = fileName;
             this.buffer = buffer;
+            this.action = action; //user or groupname
         }
     }
 
@@ -109,11 +112,29 @@ public class Messages implements Serializable {
 
     public static class GroupSendTextMessage implements Serializable {
         public final String groupname;
+        public final String sourcename;
         public final String message;
 
-        public GroupSendTextMessage(String groupname, String message) {
+        public GroupSendTextMessage(String groupname, String sourcename, String message) {
             this.groupname = groupname;
+            this.sourcename = sourcename;
             this.message = message;
+
+        }
+    }
+
+    public static class GroupSendFileMessage implements Serializable {
+        public final String groupname;
+        public final String sourcename;
+        public final String fileName;
+        public final byte[] buffer;
+
+        public GroupSendFileMessage(String groupname, String sourcename, String fileName, byte[] buffer) {
+            this.groupname = groupname;
+            this.sourcename = sourcename;
+            this.fileName = fileName;
+            this.buffer = buffer;
+
         }
     }
 
