@@ -14,6 +14,7 @@ import scala.concurrent.Future;
 
 import java.time.Duration;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -38,97 +39,91 @@ public class Manager extends AbstractActor {
                 .build();
     }
 
-    private void onConnect(ConnectionMessage connectMsg) { //TODO use validator
+    private void onConnect(ConnectionMessage connectMsg) {
         logger.info("Got a connection Message");
-        if (!usersMap.containsKey(connectMsg.username)) {
-            logger.info("Creating new user: " + connectMsg.username);
-            usersMap.put(connectMsg.username,  new UserInfo(connectMsg.username,new LinkedList<String>(), connectMsg.client));
-            logger.info("Debug- the users map:\n " + usersMap.toString());
-            getSender().tell(new TextMessage(Constants.CONNECT_SUCC(connectMsg.username)), ActorRef.noSender());
-        } else {
-            logger.info(Constants.CONNECT_FAIL(connectMsg.username));
-            getSender().tell(new ErrorMessage(Constants.CONNECT_FAIL(connectMsg.username)), ActorRef.noSender());
-        }
+        if (ValidateIsUserExist(connectMsg.username, false)) return;
+
+        logger.info("Creating new user: " + connectMsg.username);
+        usersMap.put(connectMsg.username, new UserInfo(connectMsg.username, new LinkedList<>(), connectMsg.client));
+        logger.info("Debug- the users map:\n " + usersMap.toString());
+        getSender().tell(new TextMessage(Constants.CONNECT_SUCC(connectMsg.username)), ActorRef.noSender());
+
     }
-    //TODO use validator
-    private void onDisconnect(DisconnectMessage disconnectMsg) { //TODO: gracefully leaves all groups
+
+    private void onDisconnect(DisconnectMessage disconnectMsg) {
         logger.info("Got a disconnection Message");
-        if (usersMap.containsKey(disconnectMsg.username)){
-            usersMap.remove(disconnectMsg.username);
-            logger.info("disconnecting user: " + disconnectMsg.username);
-            logger.info("Debug- the users map:\n " + usersMap.toString());
-            getSender().tell(new TextMessage(Constants.DISCONNECT_SUCC(disconnectMsg.username)), ActorRef.noSender());
+        if (!ValidateIsUserExist(disconnectMsg.username, true)) return;
+
+        List<String> userGroupNames = new LinkedList<>(usersMap.get(disconnectMsg.username).getGroups());
+        for( String groupName : userGroupNames ){
+           if(!onGroupLeave(new GroupLeaveMessage(groupName, disconnectMsg.username))){ return; }
         }
-        else {
-            logger.info(Constants.DISCONNECT_FAIL(disconnectMsg.username));
-            getSender().tell(new ErrorMessage(Constants.DISCONNECT_FAIL(disconnectMsg.username)), ActorRef.noSender());
-        }
+        usersMap.remove(disconnectMsg.username);
+        getSender().tell(new TextMessage(Constants.DISCONNECT_SUCC(disconnectMsg.username)), ActorRef.noSender());
+
+        logger.info("disconnecting user: " + disconnectMsg.username);
+        logger.info("Debug- the users map:\n " + usersMap.toString());
     }
 
-    private void onIsUserExist(isUserExistMessage msg) { //TODO use validator
+    private void onIsUserExist(isUserExistMessage msg) {
         logger.info("Got a IsUserExistMessage");
-        if(usersMap.containsKey(msg.targetusername)) {
-            ActorRef targetActor = usersMap.get(msg.targetusername).getActor();
-            getSender().tell(new AddressMessage(targetActor), ActorRef.noSender());
-        }
-        else {
-            logger.info(Constants.NOT_EXIST(msg.targetusername));
-            getSender().tell(new ErrorMessage(Constants.NOT_EXIST(msg.targetusername)), ActorRef.noSender());
-        }
+        if (!ValidateIsUserExist(msg.targetusername, true)) return;
+
+        ActorRef targetActor = usersMap.get(msg.targetusername).getActor();
+        getSender().tell(new AddressMessage(targetActor), ActorRef.noSender());
     }
 
-    private void onGroupCreate(GroupCreateMessage createMsg) { //TODO use validators
+    private void onGroupCreate(GroupCreateMessage createMsg) {
         logger.info("Got a Create Group Message");
-        if (!groupsMap.containsKey(createMsg.groupname)) {
-            logger.info("Creating new group: " + createMsg.groupname);
-            groupsMap.put(createMsg.groupname,  new GroupInfo(createMsg.groupname, createMsg.username, getSender()));
-            usersMap.get(createMsg.username).getGroups().add(createMsg.groupname);
-            logger.info("Debug- the usersgroups map:\n " + groupsMap.toString());
-            getSender().tell(new TextMessage(Constants.GROUP_CREATE_SUCC(createMsg.groupname)), ActorRef.noSender());
-            logger.info("admin path is::\n " +  getSender().path().toString());
-        } else {
-            logger.info(Constants.GROUP_CREATE_FAIL(createMsg.groupname));
-            getSender().tell(new ErrorMessage(Constants.GROUP_CREATE_FAIL(createMsg.groupname)), ActorRef.noSender());
-        }
+        if(ValidateIsGroupExist(createMsg.groupname, false)) return;
+
+        logger.info("Creating new group: " + createMsg.groupname);
+        groupsMap.put(createMsg.groupname,  new GroupInfo(createMsg.groupname, createMsg.username, getSender()));
+        usersMap.get(createMsg.username).getGroups().add(createMsg.groupname);
+        getSender().tell(new TextMessage(Constants.GROUP_CREATE_SUCC(createMsg.groupname)), ActorRef.noSender());
+
+        logger.info("Debug- the usersgroups map:\n " + groupsMap.toString());
+        logger.info("admin path is::\n " +  getSender().path().toString());
     }
 
 
 
-    private void onGroupLeave(GroupLeaveMessage leaveMsg) {
+    private boolean onGroupLeave(GroupLeaveMessage leaveMsg) {
         logger.info("Got a Leave Group Message");
         String groupname = leaveMsg.groupname;
         String username = leaveMsg.username;
 
-        if (!ValidateIsGroupExist(groupname, true)) return;
+        if (!ValidateIsGroupExist(groupname, true)) return false;
 
         GroupInfo group = groupsMap.get(groupname);
-        if (!ValidateIsGroupContainsUser(group, username, true)) return;
+        if (!ValidateIsGroupContainsUser(group, username, true)) return false;
 
         boolean deleteGroup = false;
         GroupRouter groupRouter = group.getGroupRouter();
         switch (group.getUserGroupMode(username)){
             case ADMIN:
                 deleteGroup = true;
-                groupRouter.broadcastMessage((ActorCell) getContext(), new TextMessage(username +" admin has closed " + groupname +"!"));
+                groupRouter.broadcastMessage((ActorCell) getContext(), new TextMessage(Constants.GROUP_ADMIN_LEAVE(groupname, username)));
 
             case CO_ADMIN:
-                groupRouter.broadcastMessage((ActorCell) getContext(), new TextMessage(username +" is removed from co-admin list in " + groupname));
+                groupRouter.broadcastMessage((ActorCell) getContext(), new TextMessage(Constants.GROUP_COADMIN_LEAVE_SUCC(groupname,username)));
 
             case MUTED:
             case USER:
                 removeUserFromGroup(groupname, username, group);
-                groupRouter.broadcastMessage((ActorCell) getContext(), new TextMessage(username +" has left " + groupname + "!"));
+                groupRouter.broadcastMessage((ActorCell) getContext(), new TextMessage(Constants.GROUP_LEAVE_SUCC(groupname, username)));
                 break;
             case NONE:
                 logger.info("DEBUG - Manager should not Reach this point!");
-                return;
+                return false;
         }
         if(deleteGroup){
-            for(String userName : group.getAllUsers()){ //TODO remove total users outside the scope. will throw exception
+            for(String userName : group.getAllUsers()){
                 removeUserFromGroup(groupname, userName, group);
             }
             groupsMap.remove(groupname);
         }
+        return true;
     }
 
     private void removeUserFromGroup(String groupname, String username, GroupInfo group) {
@@ -186,32 +181,6 @@ public class Manager extends AbstractActor {
 
     /** Auxiliary methods **/
 
-        /**
-         * if actor doesn't exist, return null
-         * @param actorRef
-         * @return
-         **/
-    private UserInfo getUserInfo(ActorRef actorRef){
-
-        for (ConcurrentMap.Entry<String, UserInfo> entry : usersMap.entrySet()) {
-            if (entry.getValue().getActor().equals(actorRef))
-                return entry.getValue();
-        }
-        return null;
-    }
-
-
-    private String getUserName(UserInfo userInfo) { //checked! works
-        return usersMap
-            .entrySet()
-            .stream()
-            .filter(entry -> userInfo.equals(entry.getValue()))
-            .map(ConcurrentMap.Entry::getKey)
-            .findFirst()
-            .get();
-    }
-
-
 
 
 //****************************Validators**********************************
@@ -256,12 +225,12 @@ public class Manager extends AbstractActor {
     private boolean ValidateIsUserExist(String username, boolean expectedExist) {
         boolean isExist = usersMap.containsKey(username);
         if(isExist && !expectedExist){
-            logger.info(Constants.NOT_EXIST(username));
-            getSender().tell(new ErrorMessage(Constants.NOT_EXIST(username)), ActorRef.noSender());
-        }
-        if(!isExist && expectedExist){
             logger.info(Constants.CONNECT_FAIL(username));
             getSender().tell(new ErrorMessage(Constants.CONNECT_FAIL(username)), ActorRef.noSender());
+        }
+        if(!isExist && expectedExist){
+            logger.info(Constants.NOT_EXIST(username));
+            getSender().tell(new ErrorMessage(Constants.NOT_EXIST(username)), ActorRef.noSender());
         }
         return isExist;
     }

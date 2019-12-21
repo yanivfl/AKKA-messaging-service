@@ -6,7 +6,6 @@ import java.util.List;
 
 public class UserInfo{
     private String userName;
-    private boolean isAdmin;
     private List<String> groups;
     private ActorRef actor;
 
@@ -39,7 +38,6 @@ public class UserInfo{
     @Override
     public String toString() {
         return "UserInfo{" +
-                "isAdmin=" + isAdmin +
                 ", groups=" + groups +
                 ", actor=" + actor +
                 '}';

@@ -24,7 +24,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
         private static final Scanner scanner = new Scanner(System.in);   // Creating a Scanner object
         private static boolean connect;
         private static String clientUserName = "";
-        private static final Timeout timeout = Timeout.create(Duration.ofSeconds(1));
+        private static final Timeout timeout = Timeout.create(Duration.ofSeconds(20));
         private static AtomicBoolean isInviteAnswer = new AtomicBoolean(false);
         private static AtomicBoolean expectingInviteAnswer = new AtomicBoolean(false);
         private static final Object waitingObject = new Object();
