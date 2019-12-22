@@ -5,26 +5,16 @@ import akka.actor.ActorRef;
 import java.util.List;
 
 public class UserInfo{
-    private String userName;
     private List<String> groups;
     private ActorRef actor;
 
-    public UserInfo(String userName, List<String> groups, ActorRef actor) {
-        this.userName = userName;
+    public UserInfo(List<String> groups, ActorRef actor) {
         this.groups = groups;
         this.actor = actor;
     }
 
-    public String getUserName() {
-        return userName;
-    }
-
     public List<String> getGroups() {
         return groups;
-    }
-
-    public void setGroups(List<String> groups) {
-        this.groups = groups;
     }
 
     public ActorRef getActor() {

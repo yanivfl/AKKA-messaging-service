@@ -43,17 +43,21 @@ public class Manager extends AbstractActor {
 
     private void onGroupSendTextMessage(GroupSendTextMessage groupTextMessage){
         logger.info("got a group send text message!");
+        if(!ValidateIsUserExist(groupTextMessage.sourcename, true)) return;
         if(!ValidateIsGroupExist(groupTextMessage.groupname, true)) return;
         if(!ValidateIsGroupContainsUser(groupsMap.get(groupTextMessage.groupname),
                 groupTextMessage.sourcename, true)) return;
 
         groupsMap.get(groupTextMessage.groupname).
                 getGroupRouter().
-                broadcastMessage((ActorCell) getContext(), new TextMessage(groupTextMessage.message));
+                broadcastMessage((ActorCell) getContext(),
+                        usersMap.get(groupTextMessage.sourcename).getActor(),
+                        new TextMessage(groupTextMessage.message));
         }
 
     private void onGroupSendFileMessage(GroupSendFileMessage groupFileMessage){
         logger.info("got a group send file message!");
+        if(!ValidateIsUserExist(groupFileMessage.sourcename, true)) return;
         if(!ValidateIsGroupExist(groupFileMessage.groupname, true)) return;
         if(!ValidateIsGroupContainsUser(groupsMap.get(groupFileMessage.groupname),
                 groupFileMessage.sourcename, true)) return;
@@ -61,6 +65,7 @@ public class Manager extends AbstractActor {
         groupsMap.get(groupFileMessage.groupname).
                 getGroupRouter().
                 broadcastFile((ActorCell) getContext(),
+                        usersMap.get(groupFileMessage.sourcename).getActor(),
                         new AllBytesFileMessage(groupFileMessage.sourcename, groupFileMessage.fileName,
                                 groupFileMessage.groupname, groupFileMessage.buffer));
     }
@@ -70,7 +75,7 @@ public class Manager extends AbstractActor {
         if (ValidateIsUserExist(connectMsg.username, false)) return;
 
         logger.info("Creating new user: " + connectMsg.username);
-        usersMap.put(connectMsg.username, new UserInfo(connectMsg.username, new LinkedList<>(), connectMsg.client));
+        usersMap.put(connectMsg.username, new UserInfo(new LinkedList<>(), connectMsg.client));
         logger.info("Debug- the users map:\n " + usersMap.toString());
         getSender().tell(new TextMessage(Constants.CONNECT_SUCC(connectMsg.username)), ActorRef.noSender());
 
@@ -83,6 +88,7 @@ public class Manager extends AbstractActor {
         List<String> userGroupNames = new LinkedList<>(usersMap.get(disconnectMsg.username).getGroups());
         for( String groupName : userGroupNames ){
            if(!onGroupLeave(new GroupLeaveMessage(groupName, disconnectMsg.username))){ return; }
+            logger.info(disconnectMsg.username + " left " + groupName);
         }
         usersMap.remove(disconnectMsg.username);
         getSender().tell(new TextMessage(Constants.DISCONNECT_SUCC(disconnectMsg.username)), ActorRef.noSender());
@@ -116,12 +122,14 @@ public class Manager extends AbstractActor {
 
     private boolean onGroupLeave(GroupLeaveMessage leaveMsg) {
         logger.info("Got a Leave Group Message");
+        logger.info("user map: " + usersMap.toString());
         String groupname = leaveMsg.groupname;
         String username = leaveMsg.username;
-
-        if (!ValidateIsGroupExist(groupname, true)) return false;
-
         GroupInfo group = groupsMap.get(groupname);
+        ActorRef sourceActor = usersMap.get(username).getActor();
+
+        if (!ValidateIsUserExist(username, true)) return false;
+        if (!ValidateIsGroupExist(groupname, true)) return false;
         if (!ValidateIsGroupContainsUser(group, username, true)) return false;
 
         boolean deleteGroup = false;
@@ -129,15 +137,21 @@ public class Manager extends AbstractActor {
         switch (group.getUserGroupMode(username)){
             case ADMIN:
                 deleteGroup = true;
-                groupRouter.broadcastMessage((ActorCell) getContext(), new TextMessage(Constants.GROUP_ADMIN_LEAVE(groupname, username)));
+                groupRouter.broadcastMessage((ActorCell) getContext(),
+                        sourceActor,
+                        new TextMessage(Constants.GROUP_ADMIN_LEAVE(groupname, username)));
 
             case CO_ADMIN:
-                groupRouter.broadcastMessage((ActorCell) getContext(), new TextMessage(Constants.GROUP_COADMIN_LEAVE_SUCC(groupname,username)));
+                groupRouter.broadcastMessage((ActorCell) getContext(),
+                        sourceActor,
+                        new TextMessage(Constants.GROUP_COADMIN_LEAVE_SUCC(groupname,username)));
 
             case MUTED:
             case USER:
                 removeUserFromGroup(groupname, username, group);
-                groupRouter.broadcastMessage((ActorCell) getContext(), new TextMessage(Constants.GROUP_LEAVE_SUCC(groupname, username)));
+                groupRouter.broadcastMessage((ActorCell) getContext(),
+                        sourceActor,
+                        new TextMessage(Constants.GROUP_LEAVE_SUCC(groupname, username)));
                 break;
             case NONE:
                 logger.info("DEBUG - Manager should not Reach this point!");
@@ -150,14 +164,6 @@ public class Manager extends AbstractActor {
             groupsMap.remove(groupname);
         }
         return true;
-    }
-
-    private void removeUserFromGroup(String groupname, String username, GroupInfo group) {
-        logger.info("removing " + username + " from " + groupname);
-        group.removeUsername(username, group.getUserGroupMode(username));
-        group.getGroupRouter().removeRoutee(usersMap.get(username).getActor());
-        usersMap.get(username).getGroups().remove(groupname);
-        logger.info("group after remove is: " + group.toString());
     }
 
     private void onGroupInvite(GroupInviteMessage inviteMsg) {
@@ -184,7 +190,7 @@ public class Manager extends AbstractActor {
             if (result.getClass() == isAcceptInvite.class) {
                 if(((isAcceptInvite)result).isAccept){
                     logger.info("adding " + targetusername + " to " + groupname);
-                    addUserToGroup(targetusername, group, targetActor);
+                    addUserToGroup(groupname, targetusername, group);
                     targetActor.tell(new TextMessage("Welcome to " + groupname + "!"), ActorRef.noSender());
                     logger.info("group after invite is: " + group.toString());
                 }
@@ -198,10 +204,19 @@ public class Manager extends AbstractActor {
         }
     }
 
-    private void addUserToGroup(String targetusername, GroupInfo group, ActorRef targetActor) {
-        group.getUsers().add(targetusername);
-        group.getGroupRouter().addRoutee(targetActor);
-        logger.info("added " + targetusername + " to group " + group.toString() + " with path " + targetActor.path().toString() );
+    private void addUserToGroup(String groupname, String username, GroupInfo group) {
+        group.getUsers().add(username);
+        group.getGroupRouter().addRoutee(usersMap.get(username).getActor());
+        usersMap.get(username).getGroups().add(groupname);
+        logger.info("added " + username + " to group " + group.toString());
+    }
+
+    private void removeUserFromGroup(String groupname, String username, GroupInfo group) {
+        logger.info("removing " + username + " from " + groupname);
+        group.removeUsername(username, group.getUserGroupMode(username));
+        group.getGroupRouter().removeRoutee(usersMap.get(username).getActor());
+        usersMap.get(username).getGroups().remove(groupname);
+        logger.info("group after remove is: " + group.toString());
     }
 
 
@@ -250,6 +265,7 @@ public class Manager extends AbstractActor {
 
     private boolean ValidateIsUserExist(String username, boolean expectedExist) {
         boolean isExist = usersMap.containsKey(username);
+        logger.info("isExist: " + isExist+ ", username: "+ username+ ", expected: " + expectedExist);
         if(isExist && !expectedExist){
             logger.info(Constants.CONNECT_FAIL(username));
             getSender().tell(new ErrorMessage(Constants.CONNECT_FAIL(username)), ActorRef.noSender());

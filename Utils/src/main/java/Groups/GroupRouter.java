@@ -27,16 +27,20 @@ public class GroupRouter {
         paths.remove(routee.path().toString());
     }
 
-    public void broadcastMessage(ActorCell context, Messages.TextMessage msg ){
+    public void broadcastMessage(ActorCell context, ActorRef sourceRoutee, Messages.TextMessage msg ){
+        removeRoutee(sourceRoutee);
         UUID uuid = Generators.timeBasedGenerator().generate();
         ActorRef broadcastRouter = context.actorOf(new ConsistentHashingGroup(paths).props(), "BroadcastingRouter"+ uuid);
         broadcastRouter.tell(new Broadcast(msg), ActorRef.noSender());
+        addRoutee(sourceRoutee);
     }
 
-    public void broadcastFile(ActorCell context, Messages.AllBytesFileMessage msg ){
+    public void broadcastFile(ActorCell context, ActorRef sourceRoutee, Messages.AllBytesFileMessage msg ){
+        removeRoutee(sourceRoutee);
         UUID uuid = Generators.timeBasedGenerator().generate();
         ActorRef broadcastRouter = context.actorOf(new ConsistentHashingGroup(paths).props(), "BroadcastingRouter"+ uuid);
         broadcastRouter.tell(new Broadcast(msg), ActorRef.noSender());
+        addRoutee(sourceRoutee);
     }
 
 
