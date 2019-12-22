@@ -37,6 +37,8 @@ public class GroupInfo {
 
     public boolean isAdmin(String username) { return admin.equals(username); }
 
+    public boolean isMuted(String username) { return mutedusers.contains(username); }
+
     public List<String> getCoAdmins() { return coAdmins; }
 
     public List<String> getMuteds() { return mutedusers; }
@@ -55,7 +57,7 @@ public class GroupInfo {
 
     public GroupRouter getGroupRouter() { return groupRouter; }
 
-    public boolean userHasPriviledges(String username){
+    public boolean userHasPrivileges(String username){
         return admin.equals(username) || coAdmins.contains(username);
     }
 
@@ -66,12 +68,24 @@ public class GroupInfo {
                 users.contains(username)? groupMode.USER:
                 groupMode.NONE;
     }
-    public void promoteToCoadmin(String username){
+
+    public void muteUser(String username){
+        if (coAdmins.contains(username)) {coAdmins.remove(username);}
+        if (users.contains(username)) {users.remove(username);}
+        mutedusers.add(username);
+    }
+
+    public void unMuteUser(String username){
+        mutedusers.remove(username);
+        users.add(username);
+    }
+
+    public void promoteToCoAdmin(String username){
         if (mutedusers.contains(username)) {mutedusers.remove(username);}
         if (users.contains(username)) {users.remove(username);}
         coAdmins.add(username);
     }
-    public void demoteCoadmin(String username){
+    public void demoteCoAdmin(String username){
         users.add(username);
         coAdmins.remove(username);
     }

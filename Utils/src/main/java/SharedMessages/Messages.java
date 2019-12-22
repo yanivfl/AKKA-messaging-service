@@ -7,19 +7,19 @@ public class Messages implements Serializable {
 
 
     public static class DisconnectMessage implements Serializable {
-        public final String username;
+        public final String userName;
 
         public DisconnectMessage(String clientUserName) {
-            this.username = clientUserName;
+            this.userName = clientUserName;
         }
     }
 
     public static class ConnectionMessage implements Serializable {
-        public final String username;
+        public final String userName;
         public final ActorRef client;
 
-        public ConnectionMessage(String username, ActorRef client) {
-            this.username = username;
+        public ConnectionMessage(String userName, ActorRef client) {
+            this.userName = userName;
             this.client = client;
         }
     }
@@ -41,10 +41,10 @@ public class Messages implements Serializable {
     }
 
     public static class validateUserSendMessage implements Serializable {
-        public final String targetusername;
+        public final String targetUserName;
 
-        public validateUserSendMessage(String targetusername) {
-            this.targetusername = targetusername;
+        public validateUserSendMessage(String targetUserName) {
+            this.targetUserName = targetUserName;
         }
     }
 
@@ -72,10 +72,10 @@ public class Messages implements Serializable {
     }
 
     public static class AddressMessage implements Serializable {
-        public final ActorRef targetactor;
+        public final ActorRef targetActor;
 
-        public AddressMessage(ActorRef targetactor) {
-            this.targetactor = targetactor;
+        public AddressMessage(ActorRef targetActor) {
+            this.targetActor = targetActor;
         }
     }
 
@@ -90,27 +90,27 @@ public class Messages implements Serializable {
             this.userName = userName;
             this.fileName = fileName;
             this.buffer = buffer;
-            this.action = action; //user or groupname
+            this.action = action; //user or groupName
         }
     }
 
     public static class GroupCreateMessage implements Serializable {
-        public final String username;
-        public final String groupname;
+        public final String userName;
+        public final String groupName;
 
-        public GroupCreateMessage(String groupname, String username) {
-            this.groupname = groupname;
-            this.username = username;
+        public GroupCreateMessage(String groupName, String userName) {
+            this.groupName = groupName;
+            this.userName = userName;
         }
     }
 
     public static class GroupLeaveMessage implements Serializable {
-        public final String groupname;
-        public final String username;
+        public final String groupName;
+        public final String userName;
 
-        public GroupLeaveMessage(String groupname, String username) {
-            this.groupname = groupname;
-            this.username = username;
+        public GroupLeaveMessage(String groupName, String userName) {
+            this.groupName = groupName;
+            this.userName = userName;
         }
     }
 
@@ -128,76 +128,76 @@ public class Messages implements Serializable {
     }
 
     public static class GroupInviteRequestReply implements Serializable {
-        public final String groupname;
+        public final String groupName;
         public final String text;
 
 
-        public GroupInviteRequestReply(String groupname, String text) {
-            this.groupname = groupname;
+        public GroupInviteRequestReply(String groupName, String text) {
+            this.groupName = groupName;
             this.text = text;
 
         }
     }
 
     public static class GroupRemoveMessage implements Serializable {
-        public final String groupname;
-        public final String sourceusername;
-        public final String targetusername;
+        public final String groupName;
+        public final String sourceUserName;
+        public final String targetUserName;
 
-        public GroupRemoveMessage(String groupname, String sourceusername, String targetusername) {
-            this.groupname = groupname;
-            this.sourceusername = sourceusername;
-            this.targetusername = targetusername;
+        public GroupRemoveMessage(String groupName, String sourceUserName, String targetUserName) {
+            this.groupName = groupName;
+            this.sourceUserName = sourceUserName;
+            this.targetUserName = targetUserName;
         }
     }
 
     public static class GroupMuteMessage implements Serializable {
-        public final String groupname;
-        public final String sourceusername;
-        public final String targetusername;
-        public final int timeinseconds;
+        public final String groupName;
+        public final String sourceUserName;
+        public final String targetUserName;
+        public final int timeInSeconds;
 
-        public GroupMuteMessage(String groupname, String sourceusername, String targetusername, String timeinseconds) {
-            this.groupname = groupname;
-            this.sourceusername = sourceusername;
-            this.targetusername = targetusername;
-            this.timeinseconds = Integer.parseInt(timeinseconds);
+        public GroupMuteMessage(String groupName, String sourceUserName, String targetUserName, String timeInSeconds) {
+            this.groupName = groupName;
+            this.sourceUserName = sourceUserName;
+            this.targetUserName = targetUserName;
+            this.timeInSeconds = Integer.parseInt(timeInSeconds);
         }
     }
 
     public static class GroupUnMuteMessage implements Serializable {
-        public final String groupname;
-        public final String sourceusername;
-        public final String targetusername;
+        public final String groupName;
+        public final String sourceUserName;
+        public final String targetUserName;
 
-        public GroupUnMuteMessage(String groupname, String sourceusername, String targetusername) {
-            this.groupname = groupname;
-            this.sourceusername = sourceusername;
-            this.targetusername = targetusername;
+        public GroupUnMuteMessage(String groupName, String sourceUserName, String targetUserName) {
+            this.groupName = groupName;
+            this.sourceUserName = sourceUserName;
+            this.targetUserName = targetUserName;
         }
     }
 
-    public static class GroupCoadminAddMessage implements Serializable {
-        public final String groupname;
-        public final String sourceusername;
-        public final String targetusername;
+    public static class GroupCoAdminAddMessage implements Serializable {
+        public final String groupName;
+        public final String sourceUserName;
+        public final String targetUserName;
 
-        public GroupCoadminAddMessage(String groupname, String sourceusername, String targetusername) {
-            this.groupname = groupname;
-            this.sourceusername = sourceusername;
-            this.targetusername = targetusername;
+        public GroupCoAdminAddMessage(String groupName, String sourceUserName, String targetUserName) {
+            this.groupName = groupName;
+            this.sourceUserName = sourceUserName;
+            this.targetUserName = targetUserName;
         }
     }
 
-    public static class GroupCoadminRemoveMessage implements Serializable {
-        public final String groupname;
-        public final String sourceusername;
-        public final String targetusername;
+    public static class GroupCoAdminRemoveMessage implements Serializable {
+        public final String groupName;
+        public final String sourceUserName;
+        public final String targetUserName;
 
-        public GroupCoadminRemoveMessage(String groupname, String sourceusername, String targetusername) {
-            this.groupname = groupname;
-            this.sourceusername = sourceusername;
-            this.targetusername = targetusername;
+        public GroupCoAdminRemoveMessage(String groupName, String sourceUserName, String targetUserName) {
+            this.groupName = groupName;
+            this.sourceUserName = sourceUserName;
+            this.targetUserName = targetUserName;
         }
     }
 

@@ -1,4 +1,3 @@
-import Groups.GroupInfo;
 import SharedMessages.Messages.*;
 import Users.Constants;
 import akka.actor.*;
@@ -6,7 +5,6 @@ import akka.pattern.Patterns;
 import akka.routing.Broadcast;
 import com.typesafe.config.ConfigFactory;
 import akka.util.Timeout;
-import scala.collection.immutable.Stream;
 import scala.concurrent.Await;
 import scala.concurrent.Future;
 
@@ -115,7 +113,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
                     }
                 case "text":
                     if (command.length > 3) { // /user text targer msg
-                        onChatTextualMessage(command[2], extaractMsg(command, 3));
+                        onChatTextualMessage(command[2], extractMsg(command, 3));
                         return;
                     }
                 case "file":
@@ -143,7 +141,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
                     groupUserCommandSwitch(command);
                     return;
                 case "coadmin":
-                    coadminCommandSwitch(command);
+                    coAdminCommandSwitch(command);
                     return;
                 case "send":
                     groupSendCommandSwitch(command);
@@ -157,7 +155,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
             switch (command[2]) {
                 case "text":
                     if (command.length >= 5) {
-                        groupSendText(command[3], extaractMsg(command, 4));
+                        groupSendText(command[3], extractMsg(command, 4));
                         return;
                     }
                 case "file":
@@ -182,25 +180,29 @@ import java.util.concurrent.atomic.AtomicBoolean;
                         return;
                     }
                 case "mute":
-                    System.out.println("mute not implement");
-                    break;
+                    if (command.length == 6) {
+                        onGroupMute(command[3], command[4], command[5]);
+                        return;
+                    }
                 case "unmute":
-                    System.out.println("unmute not implement");
-                    break;
+                    if (command.length == 5) {
+                        onGroupUnMute(command[3], command[4]);
+                        return;
+                    }
             }
             System.out.println("The Group user feature you requested does not exist, please try again");
         }
 
-        private static void coadminCommandSwitch(String[] command) {
+        private static void coAdminCommandSwitch(String[] command) {
             switch (command[2]) {
                 case "add":
                     if (command.length == 5) {
-                        onCoadminAdd(command[3], command[4]);
+                        onCoAdminAdd(command[3], command[4]);
                         break;
                     }
                 case "remove":
                     if (command.length == 5) {
-                        onCoadminRemove(command[3], command[4]);
+                        onCoAdminRemove(command[3], command[4]);
                         break;
                     }
                 default:
@@ -208,7 +210,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
             }
         }
 
-        private static String extaractMsg(String[] command, int indexMessage) {
+        private static String extractMsg(String[] command, int indexMessage) {
             String[] temp = Arrays.copyOfRange(command, indexMessage, command.length);
             String msg = Arrays.toString(temp);
             msg = msg.substring(1, msg.length() - 1).replace(",", "");
@@ -225,7 +227,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
             try {
                 Object result = Await.result(rt, timeout.duration());
                 if (result.getClass() == TextMessage.class) {
-                    clientUserName = connMsg.username;
+                    clientUserName = connMsg.userName;
                     connect = true;
                     System.out.println(((TextMessage) result).text);
                 } else
@@ -258,15 +260,15 @@ import java.util.concurrent.atomic.AtomicBoolean;
             }
         }
 
-        private static void onChatTextualMessage(String targetname, String msg) {
-            ActorRef targetactor = validateGetTargetActor(targetname);
-            if (targetactor != null)
-                targetactor.tell(new TextMessage(Constants.PRINTING(Constants.ACTION_USER, clientUserName, msg)), clientRef);
+        private static void onChatTextualMessage(String targetName, String msg) {
+            ActorRef targetActor = validateGetterGetActor(targetName);
+            if (targetActor != null)
+                targetActor.tell(new TextMessage(Constants.PRINTING(Constants.ACTION_USER, clientUserName, msg)), clientRef);
         }
 
         private static void onChatBinaryMessage(String targetName, String filePath) {
-            ActorRef targetactor = validateGetTargetActor(targetName); //prints error message inside
-            if (targetactor == null) {
+            ActorRef targetActor = validateGetterGetActor(targetName); //prints error message inside
+            if (targetActor == null) {
                 return;
             }
             File file = new File(filePath);
@@ -278,19 +280,19 @@ import java.util.concurrent.atomic.AtomicBoolean;
             String fileName = Paths.get(filePath).getFileName().toString();
             try {
                 byte[] buffer = Files.readAllBytes(Paths.get(filePath));
-                targetactor.tell(new AllBytesFileMessage(clientUserName, fileName, Constants.ACTION_USER, buffer), clientRef);
+                targetActor.tell(new AllBytesFileMessage(clientUserName, fileName, Constants.ACTION_USER, buffer), clientRef);
             } catch (IOException e) {
                 e.printStackTrace();
             }
         }
 
 
-        private static void onGroupCreate(String groupname) {
-            manager.tell(new GroupCreateMessage(groupname, clientUserName), clientRef);
+        private static void onGroupCreate(String groupName) {
+            manager.tell(new GroupCreateMessage(groupName, clientUserName), clientRef);
         }
 
-        private static void onGroupLeave(String groupname) {
-            manager.tell(new GroupLeaveMessage(groupname, clientUserName), clientRef);
+        private static void onGroupLeave(String groupName) {
+            manager.tell(new GroupLeaveMessage(groupName, clientUserName), clientRef);
         }
 
         private static void onGroupInvite(String groupName, String targetUserName) {
@@ -359,13 +361,13 @@ import java.util.concurrent.atomic.AtomicBoolean;
             }
         }
 
-        private static void onGroupRemove (String groupName, String targetUserName){
+        private static void onGroupRemove(String groupName, String targetUserName){
             ActorRef targetActor = null;
             Future<Object> rt = Patterns.ask(manager, new GroupRemoveMessage(groupName, clientUserName, targetUserName), timeout);
             try {
                 Object result = Await.result(rt, timeout.duration());
                 if (result.getClass() == AddressMessage.class){
-                    targetActor = ((AddressMessage) result).targetactor;
+                    targetActor = ((AddressMessage) result).targetActor;
                     if( targetActor != null) {
                         targetActor.tell(new TextMessage(Constants.PRINTING( groupName, clientUserName,
                                 Constants.GROUP_REMOVE_PROMPT(groupName, clientUserName)
@@ -383,23 +385,51 @@ import java.util.concurrent.atomic.AtomicBoolean;
         private static void onGroupMute(String groupName, String targetUserName, String timeInSeconds){
             ActorRef targetActor = null;
             Future<Object> rt = Patterns.ask(manager, new GroupMuteMessage(groupName, clientUserName, targetUserName, timeInSeconds), timeout);
-
-
+            try {
+                Object result = Await.result(rt, timeout.duration());
+                if (result.getClass() == AddressMessage.class){
+                    targetActor = ((AddressMessage) result).targetActor;
+                    if( targetActor != null) {
+                        targetActor.tell(new TextMessage(Constants.PRINTING( groupName, clientUserName,
+                                Constants.GROUP_MUTE(groupName, timeInSeconds,clientUserName)
+                        )), clientRef);
+                    }
+                } else{
+                    System.out.println(((ErrorMessage) result).error);
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+                System.out.println(Constants.SERVER_IS_OFFLINE_CONN);
+            }
         }
 
-        private static void onGroupUnMute(String groupName, String targetUserName{
+        private static void onGroupUnMute(String groupName, String targetUserName){
             ActorRef targetActor = null;
             Future<Object> rt = Patterns.ask(manager, new GroupUnMuteMessage(groupName, clientUserName, targetUserName), timeout);
-
-
+            try {
+                Object result = Await.result(rt, timeout.duration());
+                if (result.getClass() == AddressMessage.class){
+                    targetActor = ((AddressMessage) result).targetActor;
+                    if( targetActor != null) {
+                        targetActor.tell(new TextMessage(Constants.PRINTING( groupName, clientUserName,
+                                Constants.GROUP_UN_MUTE(groupName,clientUserName)
+                        )), clientRef);
+                    }
+                } else{
+                    System.out.println(((ErrorMessage) result).error);
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+                System.out.println(Constants.SERVER_IS_OFFLINE_CONN);
+            }
         }
 
-        private static void onCoadminAdd (String groupName, String targetUserName){
-            manager.tell(new GroupCoadminAddMessage(groupName, clientUserName, targetUserName), clientRef);
+        private static void onCoAdminAdd(String groupName, String targetUserName){
+            manager.tell(new GroupCoAdminAddMessage(groupName, clientUserName, targetUserName), clientRef);
         }
 
-        private static void onCoadminRemove (String groupName, String targetUserName){
-            manager.tell(new GroupCoadminRemoveMessage(groupName, clientUserName, targetUserName), clientRef);
+        private static void onCoAdminRemove(String groupName, String targetUserName){
+            manager.tell(new GroupCoAdminRemoveMessage(groupName, clientUserName, targetUserName), clientRef);
         }
 
         private static ActorRef validateGroupInvite (String groupName, String targetUserName){
@@ -407,7 +437,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
             try {
                 Object result = Await.result(rt, timeout.duration());
                 if (result.getClass() == AddressMessage.class)
-                    return ((AddressMessage) result).targetactor;
+                    return ((AddressMessage) result).targetActor;
                 else
                     System.out.println(((ErrorMessage) result).error);
             } catch (Exception e) {
@@ -418,12 +448,12 @@ import java.util.concurrent.atomic.AtomicBoolean;
         }
 
 
-        private static ActorRef validateGetTargetActor (String targetname){
-            Future<Object> rt = Patterns.ask(manager, new validateUserSendMessage(targetname), timeout);
+        private static ActorRef validateGetterGetActor(String targetName){
+            Future<Object> rt = Patterns.ask(manager, new validateUserSendMessage(targetName), timeout);
             try {
                 Object result = Await.result(rt, timeout.duration());
                 if (result.getClass() == AddressMessage.class)
-                    return ((AddressMessage) result).targetactor;
+                    return ((AddressMessage) result).targetActor;
                 else
                     System.out.println(((ErrorMessage) result).error);
             } catch (Exception e) {
@@ -439,7 +469,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
             try {
                 Object result = Await.result(rt, timeout.duration());
                 if (result.getClass() == AddressMessage.class)
-                    return ((AddressMessage) result).targetactor;
+                    return ((AddressMessage) result).targetActor;
                 else
                     System.out.println(((ErrorMessage) result).error);
             } catch (Exception e) {
