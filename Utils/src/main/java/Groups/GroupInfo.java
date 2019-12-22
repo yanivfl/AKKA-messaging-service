@@ -84,7 +84,8 @@ public class GroupInfo {
         return false;
     }
 
-    public boolean removeUsername(String username, groupMode type){
+    public boolean removeUsername(String username){
+        groupMode type = getUserGroupMode(username);
         return  type.equals(groupMode.CO_ADMIN)? coAdmins.remove(username) :
                 type.equals(groupMode.MUTED)? mutedusers.remove(username) :
                 type.equals(groupMode.USER)? users.remove(username) :

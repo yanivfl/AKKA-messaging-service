@@ -313,6 +313,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
                                 if (((isSuccMessage) result).isSucc) {
                                     targetActor.tell(new TextMessage(Constants.GROUP_WELCOME_PROMPT(groupName)), clientRef);
                                 }
+                            } else{
+                                System.out.println(((ErrorMessage) result).error);
                             }
                         } catch (Exception e) {
                             e.printStackTrace();
@@ -321,6 +323,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
                         }
                     }
                     System.out.println(Constants.GROUP_RESPOND_TO_SOURCE(clientUserName, answer));
+                } else{
+                    System.out.println(((ErrorMessage) result).error);
                 }
             } catch (Exception e) {
                 e.printStackTrace();
@@ -356,7 +360,24 @@ import java.util.concurrent.atomic.AtomicBoolean;
         }
 
         private static void onGroupRemove (String groupName, String targetUserName){
-
+            ActorRef targetActor = null;
+            Future<Object> rt = Patterns.ask(manager, new GroupRemoveMessage(groupName, clientUserName, targetUserName), timeout);
+            try {
+                Object result = Await.result(rt, timeout.duration());
+                if (result.getClass() == AddressMessage.class){
+                    targetActor = ((AddressMessage) result).targetactor;
+                    if( targetActor != null) {
+                        targetActor.tell(new TextMessage(Constants.PRINTING( groupName, clientUserName,
+                                Constants.GROUP_REMOVE_PROMPT(groupName, clientUserName)
+                        )), clientRef);
+                    }
+                } else{
+                    System.out.println(((ErrorMessage) result).error);
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+                System.out.println(Constants.SERVER_IS_OFFLINE_CONN);
+            }
         }
 
         private static void onGroupMute(String groupName, String targetUserName, String timeInSeconds){
