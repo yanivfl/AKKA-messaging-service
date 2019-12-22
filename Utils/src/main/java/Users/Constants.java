@@ -32,6 +32,7 @@ public class Constants{
     public static String GROUP_NOT_BELONG(String groupname){return "You are not part of " + groupname + "!";}
     public static String GROUP_NOT_HAVE_PREVILEDGES(String groupname){return "You are neither an admin nor a co-admin of " + groupname + "!";}
     public static String GROUP_TARGET_ALREADY_BELONGS(String targetusername, String groupname){return targetusername+ " is already in " + groupname + "!";}
+    public static String GROUP_RESPOND_TO_SOURCE(String username, String answer){return username+ " responded to group invite with the following answer: " + answer;}
     public static String PRINTING(String action, String sourcename, String message){
         Date date = new Date();
         SimpleDateFormat formatter = new SimpleDateFormat("dd-MM-yyyy HH:mm");

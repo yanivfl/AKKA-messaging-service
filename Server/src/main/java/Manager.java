@@ -148,10 +148,10 @@ public class Manager extends AbstractActor {
 
             case MUTED:
             case USER:
-                removeUserFromGroup(groupname, username, group);
                 groupRouter.broadcastMessage((ActorCell) getContext(),
                         sourceActor,
                         new TextMessage(Constants.GROUP_LEAVE_SUCC(groupname, username)));
+                removeUserFromGroup(groupname, username, group);
                 break;
             case NONE:
                 logger.info("DEBUG - Manager should not Reach this point!");
@@ -183,8 +183,9 @@ public class Manager extends AbstractActor {
         logger.info("sends invite request to " + targetusername);
         String msg = "You have been invited to " + groupname + ", Accept?";
         ActorRef targetActor = usersMap.get(targetusername).getActor();
+        ActorRef sourceActor = usersMap.get(sourceusername).getActor();
         final Timeout timeout = Timeout.create(Duration.ofSeconds(60)); //give user 1 minute to answer
-        Future<Object> rt = Patterns.ask(targetActor, new GroupInviteRequestReply(groupname, sourceusername, msg), timeout);
+        Future<Object> rt = Patterns.ask(targetActor, new GroupInviteRequestReply(groupname, sourceusername, msg, sourceActor), timeout);
         try {
             Object result = Await.result(rt, timeout.duration());
             if (result.getClass() == isAcceptInvite.class) {

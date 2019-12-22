@@ -154,11 +154,13 @@ public class Messages implements Serializable {
         public final String groupname;
         public final String sourceusername;
         public final String text;
+        public final ActorRef sourceActor;
 
-        public GroupInviteRequestReply(String groupname, String sourceusername, String text) {
+        public GroupInviteRequestReply(String groupname, String sourceusername, String text, ActorRef sourceActor) {
             this.groupname = groupname;
             this.sourceusername = sourceusername;
             this.text = text;
+            this.sourceActor = sourceActor;
         }
     }
 
