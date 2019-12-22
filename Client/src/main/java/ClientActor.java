@@ -74,7 +74,7 @@ public class ClientActor extends AbstractActor {
             getSender().tell(new isAcceptInvite(isInviteAnswer.get()), myActorRef);
             String answer = isInviteAnswer.get()? "yes" : "no";
             reqMsg.sourceActor.tell(new TextMessage(
-                    Constants.GROUP_RESPOND_TO_SOURCE(reqMsg.sourceusername,answer )), myActorRef);
+                    Constants.GROUP_RESPOND_TO_SOURCE(clientUserName,answer )), myActorRef);
         }
     }
 }
