@@ -8,6 +8,11 @@ import akka.actor.*;
 import akka.event.Logging;
 import akka.event.LoggingAdapter;
 import akka.routing.Broadcast;
+import akka.pattern.Patterns;
+import akka.util.Timeout;
+import com.sun.xml.internal.bind.v2.runtime.reflect.opt.Const;
+import scala.concurrent.Await;
+import scala.concurrent.Future;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -35,6 +40,11 @@ public class Manager extends AbstractActor {
                 .match(GroupCreateMessage.class,this::onGroupCreate)
                 .match(GroupLeaveMessage.class, this::onGroupLeave)
                 .match(GroupInviteMessage.class, this::onGroupInvite)
+                .match(GroupRemoveMessage.class, this::onGroupRemove)
+                .match(GroupSendTextMessage.class, this::onGroupSendTextMessage)
+                .match(GroupSendFileMessage.class, this::onGroupSendFileMessage)
+                .match(GroupCoadminAddMessage.class, this::onGroupCoadminAddMessage)
+                .match(GroupCoadminRemoveMessage.class, this::onGroupCoadminRemoveMessage)
                 .build();
     }
 
@@ -174,6 +184,87 @@ public class Manager extends AbstractActor {
         logger.info("group after invite is: " + group.toString());
     }
 
+    private void onGroupRemove(GroupRemoveMessage RemoveMsg) {
+        logger.info("Got a remove Message");
+        String groupname = RemoveMsg.groupname;
+        String sourceusername = RemoveMsg.sourceusername;
+        String targetusername = RemoveMsg.targetusername;
+        GroupInfo group = groupsMap.get(groupname); //returns null if doesn't exist. we will leave function in validator
+        // check all pre-conditions
+        if (!ValidateIsGroupExist(groupname, true)) return;
+        if (!ValidateIsUserExist(targetusername, true)) return;
+        if (!ValidateUserHasPriviledges(group, sourceusername, true)) return;
+        // extra pre-conditions
+        if (!ValidateIsGroupContainsUser(group, targetusername, true)) return;
+        if (ValidateIsUserAdmin(group, targetusername, false)) return;
+
+        //pre-conditions checked!
+        logger.info(targetusername + " will be removed from the "+ groupname);
+        String msg = "You have been removed from " + groupname + "by " + sourceusername+"!";
+        ActorRef targetActor = usersMap.get(targetusername).getActor();
+        ActorRef sourceActor = usersMap.get(sourceusername).getActor();
+        group.demoteCoadmin(targetusername);
+        targetActor.tell(new TextMessage(msg), sourceActor);//TODO: PRINTING FORMAT
+        logger.info(group.toString());
+
+
+    }
+
+    private void onGroupCoadminAddMessage(GroupCoadminAddMessage CoadminAddMsg) {
+        logger.info("Got a Coadmin add Message");
+        String groupname = CoadminAddMsg.groupname;
+        String sourceusername = CoadminAddMsg.sourceusername;
+        String targetusername = CoadminAddMsg.targetusername;
+        GroupInfo group = groupsMap.get(groupname); //returns null if doesn't exist. we will leave function in validator
+        // check all pre-conditions
+        if (!ValidateIsGroupExist(groupname, true)) return;
+        if (!ValidateIsUserExist(targetusername, true)) return;
+        if (!ValidateUserHasPriviledges(group, sourceusername, true)) return;
+        // extra pre-conditions
+        if (!ValidateIsGroupContainsUser(group, targetusername, true)) return;
+        if (ValidateUserHasPriviledges(group, targetusername, false)) return;
+
+        //pre-conditions checked!
+        logger.info(targetusername + " will be be added to the "+ groupname +" co-admin list");
+        String msg = "You have been promoted to co-admin in " + groupname + "!";
+        ActorRef targetActor = usersMap.get(targetusername).getActor();
+        ActorRef sourceActor = usersMap.get(sourceusername).getActor();
+        group.promoteToCoadmin(targetusername);
+        targetActor.tell(new TextMessage(msg), sourceActor);
+        logger.info(group.toString());
+
+    }
+
+    private void onGroupCoadminRemoveMessage(GroupCoadminRemoveMessage CoadminRemoveMsg) {
+        logger.info("Got a Coadmin remove Message");
+        String groupname = CoadminRemoveMsg.groupname;
+        String sourceusername = CoadminRemoveMsg.sourceusername;
+        String targetusername = CoadminRemoveMsg.targetusername;
+        GroupInfo group = groupsMap.get(groupname); //returns null if doesn't exist. we will leave function in validator
+        // check all pre-conditions
+        if (!ValidateIsGroupExist(groupname, true)) return;
+        if (!ValidateIsUserExist(targetusername, true)) return;
+        if (!ValidateUserHasPriviledges(group, sourceusername, true)) return;
+        // extra pre-conditions
+        if (!ValidateIsGroupContainsUser(group, targetusername, true)) return;
+        if (ValidateIsUserAdmin(group, targetusername, false)) return;
+
+        //pre-conditions checked!
+        logger.info(targetusername + " will be removed from the "+ groupname +" co-admin list");
+        String msg = "You have been demoted to user in " + groupname + "!";
+        ActorRef targetActor = usersMap.get(targetusername).getActor();
+        ActorRef sourceActor = usersMap.get(sourceusername).getActor();
+        group.demoteCoadmin(targetusername);
+        targetActor.tell(new TextMessage(msg), sourceActor);
+        logger.info(group.toString());
+
+
+    }
+
+
+
+    /** Auxiliary methods **/
+
     private void addUserToGroup(String groupname, String username, GroupInfo group) {
         group.getUsers().add(username);
         group.getGroupRouter().addRoutee(usersMap.get(username).getActor());
@@ -190,16 +281,27 @@ public class Manager extends AbstractActor {
     }
 
 
-    /** Auxiliary methods **/
-
-
 
 //****************************Validators**********************************
+
+    private boolean ValidateIsUserAdmin(GroupInfo group,String username, boolean expectedPrivilege) {
+        boolean isAdmin = group.isAdmin(username);
+        if(!isAdmin && expectedPrivilege){
+            logger.info("No Worries Bro");
+        }
+        if(isAdmin && !expectedPrivilege){
+            logger.info(Constants.GROUP_ACTION_ON_ADMIN(group.getGroupName(),username));
+            getSender().tell(new ErrorMessage(Constants.GROUP_ACTION_ON_ADMIN(group.getGroupName(),username)), ActorRef.noSender());
+        }
+
+        return isAdmin;
+    }
+
     private boolean ValidateIsGroupContainsUser(GroupInfo group, String username, boolean expectedContained){
         boolean isContained = !group.getUserGroupMode(username).equals(GroupInfo.groupMode.NONE);
         if(isContained && !expectedContained){
-            logger.info(Constants.GROUP_TARGET_ALREADY_BELONGS(username, group.getGroupName()));
-            getSender().tell(new ErrorMessage(Constants.GROUP_TARGET_ALREADY_BELONGS(username, group.getGroupName())), ActorRef.noSender());
+            logger.info(Constants.GROUP_TARGET_ALREADY_BELONGS(group.getGroupName(), username));
+            getSender().tell(new ErrorMessage(Constants.GROUP_TARGET_ALREADY_BELONGS(group.getGroupName(), username)), ActorRef.noSender());
         }
         if(!isContained && expectedContained){
             logger.info(Constants.GROUP_LEAVE_FAIL(group.getGroupName(), username));
@@ -222,10 +324,12 @@ public class Manager extends AbstractActor {
     }
 
     private boolean ValidateUserHasPriviledges(GroupInfo group,String username, boolean expectedPrivilege) {
-       boolean isPrivilege = group.userHasPriviledges(username);
+        boolean isPrivilege = group.userHasPriviledges(username);
         if(isPrivilege && !expectedPrivilege){
-            logger.info("No Worries Bro");
+            logger.info(Constants.GROUP_ALREADY_HAVE_PREVILEDGES(group.getGroupName(), username));
+            getSender().tell(new ErrorMessage(Constants.GROUP_ALREADY_HAVE_PREVILEDGES(group.getGroupName(), username)), ActorRef.noSender());
         }
+
         if(!isPrivilege && expectedPrivilege){
             logger.info(Constants.GROUP_NOT_HAVE_PREVILEDGES(group.getGroupName()));
             getSender().tell(new ErrorMessage(Constants.GROUP_NOT_HAVE_PREVILEDGES(group.getGroupName())), ActorRef.noSender());

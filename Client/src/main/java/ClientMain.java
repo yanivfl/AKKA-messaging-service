@@ -177,8 +177,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
                         return;
                     }
                 case "remove":
-                    System.out.println("remove not implement");
-                    break;
+                    if(command.length ==5) {
+                        onGroupRemove(command[3], command[4]);
+                        break;
+                    }
                 case "mute":
                     System.out.println("mute not implement");
                     break;
@@ -192,11 +194,15 @@ import java.util.concurrent.atomic.AtomicBoolean;
         private static void coadminCommandSwitch(String[] command) {
             switch (command[2]) {
                 case "add":
-                    System.out.println("coadmin add not implement");
-                    break;
+                    if(command.length ==5) {
+                        onCoadminAdd(command[3], command[4]);
+                        break;
+                    }
                 case "remove":
-                    System.out.println("coadmin remove not implement");
-                    break;
+                    if(command.length ==5) {
+                        onCoadminRemove(command[3], command[4]);
+                        break;
+                    }
                 default:
                     System.out.println("The Group Co-admin feature you requested does not exist, please try again");
             }
@@ -333,6 +339,20 @@ import java.util.concurrent.atomic.AtomicBoolean;
                 return;
             }
 
+        private static void onGroupRemove(String groupname, String targetusername) {
+            manager.tell(new GroupRemoveMessage(groupname, clientUserName, targetusername), clientRef);
+        }
+
+        private static void onCoadminAdd(String groupname, String targetusername) {
+            manager.tell(new GroupCoadminAddMessage(groupname, clientUserName, targetusername), clientRef);
+        }
+
+        private static void onCoadminRemove(String groupname, String targetusername) {
+            manager.tell(new GroupCoadminRemoveMessage(groupname, clientUserName, targetusername), clientRef);
+        }
+
+        private static ActorRef getTargetActorRef(String targetname) {
+            Future<Object> rt = Patterns.ask(manager, new isUserExistMessage(targetname), timeout);
             ActorRef broadcastRouter =  validateGetRouterActor(groupName);
             if (broadcastRouter == null){return;}
 
