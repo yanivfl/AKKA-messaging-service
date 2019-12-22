@@ -205,6 +205,32 @@ public class Manager extends AbstractActor {
         targetActor.tell(new TextMessage(msg), sourceActor);//TODO: PRINTING FORMAT
         logger.info(group.toString());
 
+        GroupInfo group = groupsMap.get(groupname); //returns null if doesn't exist. we will leave function in validator
+        // check all pre-conditions
+        if (!ValidateIsGroupExist(groupname, true)) return;
+        if (!ValidateIsUserExist(targetusername, true)) return;
+        if (!ValidateUserHasPriviledges(group, sourceusername, true)) return;
+        // extra pre-conditions
+        if (!ValidateIsGroupContainsUser(group, targetusername, true)) return;
+        if (ValidateIsUserAdmin(group, targetusername, false)) return;
+
+
+    }
+
+    private void onGroupMute(GroupMuteMessage muteMsg) {
+        logger.info("Got a mute Message");
+        String groupName = muteMsg.groupname;
+        String sourceUserName = muteMsg.sourceusername;
+        String targetUserName = muteMsg.targetusername;
+        int timeInMute = muteMsg.timeinseconds;
+
+    }
+
+    private void onGroupUnMute(GroupUnMuteMessage unMuteMsg) {
+        logger.info("Got a unmute Message");
+        String groupName = unMuteMsg.groupname;
+        String sourceUserName = unMuteMsg.sourceusername;
+        String targetUserName = unMuteMsg.targetusername;
 
     }
 

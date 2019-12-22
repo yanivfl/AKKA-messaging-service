@@ -355,16 +355,30 @@ import java.util.concurrent.atomic.AtomicBoolean;
             }
         }
 
-        private static void onGroupRemove (String groupname, String targetusername){
-            manager.tell(new GroupRemoveMessage(groupname, clientUserName, targetusername), clientRef);
+        private static void onGroupRemove (String groupName, String targetUserName){
+
         }
 
-        private static void onCoadminAdd (String groupname, String targetusername){
-            manager.tell(new GroupCoadminAddMessage(groupname, clientUserName, targetusername), clientRef);
+        private static void onGroupMute(String groupName, String targetUserName, String timeInSeconds){
+            ActorRef targetActor = null;
+            Future<Object> rt = Patterns.ask(manager, new GroupMuteMessage(groupName, clientUserName, targetUserName, timeInSeconds), timeout);
+
+
         }
 
-        private static void onCoadminRemove (String groupname, String targetusername){
-            manager.tell(new GroupCoadminRemoveMessage(groupname, clientUserName, targetusername), clientRef);
+        private static void onGroupUnMute(String groupName, String targetUserName{
+            ActorRef targetActor = null;
+            Future<Object> rt = Patterns.ask(manager, new GroupUnMuteMessage(groupName, clientUserName, targetUserName), timeout);
+
+
+        }
+
+        private static void onCoadminAdd (String groupName, String targetUserName){
+            manager.tell(new GroupCoadminAddMessage(groupName, clientUserName, targetUserName), clientRef);
+        }
+
+        private static void onCoadminRemove (String groupName, String targetUserName){
+            manager.tell(new GroupCoadminRemoveMessage(groupName, clientUserName, targetUserName), clientRef);
         }
 
         private static ActorRef validateGroupInvite (String groupName, String targetUserName){

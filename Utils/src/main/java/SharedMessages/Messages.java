@@ -151,6 +151,32 @@ public class Messages implements Serializable {
         }
     }
 
+    public static class GroupMuteMessage implements Serializable {
+        public final String groupname;
+        public final String sourceusername;
+        public final String targetusername;
+        public final int timeinseconds;
+
+        public GroupMuteMessage(String groupname, String sourceusername, String targetusername, String timeinseconds) {
+            this.groupname = groupname;
+            this.sourceusername = sourceusername;
+            this.targetusername = targetusername;
+            this.timeinseconds = Integer.parseInt(timeinseconds);
+        }
+    }
+
+    public static class GroupUnMuteMessage implements Serializable {
+        public final String groupname;
+        public final String sourceusername;
+        public final String targetusername;
+
+        public GroupUnMuteMessage(String groupname, String sourceusername, String targetusername) {
+            this.groupname = groupname;
+            this.sourceusername = sourceusername;
+            this.targetusername = targetusername;
+        }
+    }
+
     public static class GroupCoadminAddMessage implements Serializable {
         public final String groupname;
         public final String sourceusername;
