@@ -40,6 +40,7 @@ public class Constants{
     public static String GROUP_RESPOND_TO_SOURCE(String username, String answer){return username+ " responded to group invite with the following answer: " + answer;}
     public static String GROUP_INVITE_PROMPT(String groupName){ return "You have been invited to " + groupName + ", Accept?";}
     public static String GROUP_WELCOME_PROMPT(String groupName){ return "Welcome to " + groupName + "!";}
+    public static String GROUP_REMOVE_PROMPT(String groupName, String sourceusername){ return "You have been removed from "+ groupName + " by " + sourceusername+ "!";}
 
 
 

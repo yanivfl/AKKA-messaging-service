@@ -1,4 +1,3 @@
-import Groups.GroupRouter;
 import SharedMessages.Messages.*;
 import Users.Constants;
 import Users.UserInfo;
@@ -8,11 +7,6 @@ import akka.actor.*;
 import akka.event.Logging;
 import akka.event.LoggingAdapter;
 import akka.routing.Broadcast;
-import akka.pattern.Patterns;
-import akka.util.Timeout;
-import com.sun.xml.internal.bind.v2.runtime.reflect.opt.Const;
-import scala.concurrent.Await;
-import scala.concurrent.Future;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -37,10 +31,13 @@ public class Manager extends AbstractActor {
 
                 .match(ConnectionMessage.class, this::onConnect)
                 .match(DisconnectMessage.class, this::onDisconnect)
+
+
                 .match(GroupCreateMessage.class,this::onGroupCreate)
                 .match(GroupLeaveMessage.class, this::onGroupLeave)
                 .match(GroupInviteMessage.class, this::onGroupInvite)
-                .match(GroupRemoveMessage.class, this::onGroupRemove)
+                .match(GroupRemoveMessage.class, this::onGroupRemoveMessage)
+
                 .match(GroupCoadminAddMessage.class, this::onGroupCoadminAddMessage)
                 .match(GroupCoadminRemoveMessage.class, this::onGroupCoadminRemoveMessage)
                 .build();
@@ -182,7 +179,7 @@ public class Manager extends AbstractActor {
         logger.info("group after invite is: " + group.toString());
     }
 
-    private void onGroupRemove(GroupRemoveMessage RemoveMsg) {
+    private void onGroupRemoveMessage(GroupRemoveMessage RemoveMsg) {
         logger.info("Got a remove Message");
         String groupname = RemoveMsg.groupname;
         String sourceusername = RemoveMsg.sourceusername;
@@ -193,19 +190,17 @@ public class Manager extends AbstractActor {
         if (!ValidateIsUserExist(targetusername, true)) return;
         if (!ValidateUserHasPriviledges(group, sourceusername, true)) return;
         // extra pre-conditions
+        if (!ValidateIsUserExist(sourceusername, true)) return;
         if (!ValidateIsGroupContainsUser(group, targetusername, true)) return;
+        if (!ValidateIsGroupContainsUser(group, sourceusername, true)) return;
         if (ValidateIsUserAdmin(group, targetusername, false)) return;
 
         //pre-conditions checked!
         logger.info(targetusername + " will be removed from the "+ groupname);
-        String msg = "You have been removed from " + groupname + "by " + sourceusername+"!";
         ActorRef targetActor = usersMap.get(targetusername).getActor();
-        ActorRef sourceActor = usersMap.get(sourceusername).getActor();
-        group.demoteCoadmin(targetusername);
-        targetActor.tell(new TextMessage(msg), sourceActor);//TODO: PRINTING FORMAT
+        removeUserFromGroup(groupname, targetusername, group);
+        getSender().tell(new AddressMessage(targetActor), ActorRef.noSender());
         logger.info(group.toString());
-
-
     }
 
     private void onGroupCoadminAddMessage(GroupCoadminAddMessage CoadminAddMsg) {
@@ -272,7 +267,7 @@ public class Manager extends AbstractActor {
 
     private void removeUserFromGroup(String groupname, String username, GroupInfo group) {
         logger.info("removing " + username + " from " + groupname);
-        group.removeUsername(username, group.getUserGroupMode(username));
+        group.removeUsername(username);
         group.getGroupRouter().removeRoutee(usersMap.get(username).getActor());
         usersMap.get(username).getGroups().remove(groupname);
         logger.info("group after remove is: " + group.toString());
