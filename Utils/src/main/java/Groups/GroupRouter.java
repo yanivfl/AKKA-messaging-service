@@ -27,21 +27,22 @@ public class GroupRouter {
         paths.remove(routee.path().toString());
     }
 
-    public void broadcastMessage(ActorCell context, ActorRef sourceRoutee, Messages.TextMessage msg ){
+    public ActorRef getBroadcastRouter(ActorCell context, ActorRef sourceRoutee ){
         removeRoutee(sourceRoutee);
         UUID uuid = Generators.timeBasedGenerator().generate();
         ActorRef broadcastRouter = context.actorOf(new ConsistentHashingGroup(paths).props(), "BroadcastingRouter"+ uuid);
-        broadcastRouter.tell(new Broadcast(msg), ActorRef.noSender());
+//        broadcastRouter.tell(new Broadcast(msg), ActorRef.noSender());
         addRoutee(sourceRoutee);
+        return broadcastRouter;
     }
 
-    public void broadcastFile(ActorCell context, ActorRef sourceRoutee, Messages.AllBytesFileMessage msg ){
-        removeRoutee(sourceRoutee);
-        UUID uuid = Generators.timeBasedGenerator().generate();
-        ActorRef broadcastRouter = context.actorOf(new ConsistentHashingGroup(paths).props(), "BroadcastingRouter"+ uuid);
-        broadcastRouter.tell(new Broadcast(msg), ActorRef.noSender());
-        addRoutee(sourceRoutee);
-    }
+//    public void broadcastFile(ActorCell context, ActorRef sourceRoutee, Messages.AllBytesFileMessage msg ){
+//        removeRoutee(sourceRoutee);
+//        UUID uuid = Generators.timeBasedGenerator().generate();
+//        ActorRef broadcastRouter = context.actorOf(new ConsistentHashingGroup(paths).props(), "BroadcastingRouter"+ uuid);
+//        broadcastRouter.tell(new Broadcast(msg), ActorRef.noSender());
+//        addRoutee(sourceRoutee);
+//    }
 
 
     @Override

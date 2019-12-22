@@ -1,15 +1,16 @@
+import Groups.GroupInfo;
 import SharedMessages.Messages.*;
 import Users.Constants;
-import Users.SharedFucntions;
 import akka.actor.*;
 import akka.pattern.Patterns;
+import akka.routing.Broadcast;
 import com.typesafe.config.ConfigFactory;
 import akka.util.Timeout;
+import scala.collection.immutable.Stream;
 import scala.concurrent.Await;
 import scala.concurrent.Future;
 
 import java.io.*;
-import java.nio.channels.Channel;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.Duration;
@@ -27,7 +28,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
         private static final Scanner scanner = new Scanner(System.in);   // Creating a Scanner object
         private static boolean connect;
         private static String clientUserName = "";
-        private static final Timeout timeout = Timeout.create(Duration.ofSeconds(20));
+        private static final Timeout timeout = Timeout.create(Duration.ofSeconds(2));
         private static AtomicBoolean isInviteAnswer = new AtomicBoolean(false);
         private static AtomicBoolean expectingInviteAnswer = new AtomicBoolean(false);
         private static final Object waitingObject = new Object();
@@ -156,29 +157,12 @@ import java.util.concurrent.atomic.AtomicBoolean;
             switch (command[2]) {
                 case "text":
                     if(command.length >= 5){
-                        String groupName = command[3];
-                        String msg = extaractMsg(command, 4);
-                        manager.tell(new GroupSendTextMessage(groupName, clientUserName,
-                                Constants.PRINTING(groupName, clientUserName, msg)), clientRef);
+                        groupSendText(command[3], extaractMsg(command, 4) );
                         return;
                     }
                 case "file":
                     if(command.length == 5){
-                        String groupName = command[3];
-                        String filePath = command[4];
-                        File file = new File(filePath);
-                        if(!file.exists() || file.isDirectory()) {
-                            System.out.println(Constants.NOT_EXIST(filePath));
-                            return;
-                        }
-
-                        String fileName =Paths.get(filePath).getFileName().toString();
-                        try{
-                            byte[] buffer = Files.readAllBytes(Paths.get(filePath));
-                            manager.tell(new GroupSendFileMessage(groupName, clientUserName, fileName, buffer), clientRef);
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
+                        groupSendFile(command[3], command[4] );
                         return;
                     }
             }
@@ -242,6 +226,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
                     System.out.println(((ErrorMessage)result).error);
 
             } catch (Exception e) {
+                e.printStackTrace();
                 System.out.println(Constants.SERVER_IS_OFFLINE_CONN);
                 clientRef.tell(PoisonPill.getInstance(), ActorRef.noSender());
             }
@@ -262,19 +247,20 @@ import java.util.concurrent.atomic.AtomicBoolean;
                     System.out.println(((ErrorMessage)result).error);
 
             } catch (Exception e) {
+                e.printStackTrace();
                 System.out.println(Constants.SERVER_IS_OFFLINE_DISCONN);
                 clientRef.tell(PoisonPill.getInstance(), ActorRef.noSender());
             }
         }
 
         private static void onChatTextualMessage(String targetname, String msg) {
-            ActorRef targetactor = getTargetActorRef(targetname);
+            ActorRef targetactor = validateGetTargetActor(targetname);
             if (targetactor!=null)
                 targetactor.tell(new TextMessage(Constants.PRINTING(Constants.ACTION_USER, clientUserName, msg)), clientRef);
         }
 
         private static void onChatBinaryMessage(String targetName, String filePath)  {
-            ActorRef targetactor = getTargetActorRef(targetName); //prints error message inside
+            ActorRef targetactor = validateGetTargetActor(targetName); //prints error message inside
             if (targetactor==null) { return;}
             File file = new File(filePath);
             if(!file.exists() || file.isDirectory()) {
@@ -300,12 +286,68 @@ import java.util.concurrent.atomic.AtomicBoolean;
             manager.tell(new GroupLeaveMessage(groupname, clientUserName), clientRef);
         }
 
-        private static void onGroupInvite(String groupname, String targetusername) {
-            manager.tell(new GroupInviteMessage(groupname, clientUserName, targetusername), clientRef);
+        private static void onGroupInvite(String groupName, String targetUserName)  {
+            ActorRef targetActor = validateGroupInvite(groupName, targetUserName);
+            if (targetActor==null){ return; }
+
+            final Timeout userTimeout = Timeout.create(Duration.ofSeconds(60)); //give user 1 minute to answer
+            Future<Object> rt = Patterns.ask(targetActor, new GroupInviteRequestReply(groupName,  Constants.GROUP_INVITE_PROMPT(groupName)), userTimeout);
+            try {
+                Object result = Await.result(rt, userTimeout.duration());
+                if (result.getClass() == isAcceptInvite.class) {
+                    String answer = ((isAcceptInvite)result).isAccept? "yes" : "no";
+                    if(((isAcceptInvite)result).isAccept){
+                        rt = Patterns.ask(manager, new GroupInviteMessage(groupName, clientUserName, targetUserName), timeout);
+                        try {
+                            result = Await.result(rt, timeout.duration());
+                            if (result.getClass() == isSuccMessage.class) {
+                                if(((isSuccMessage)result).isSucc){
+                                    targetActor.tell(new TextMessage(Constants.GROUP_WELCOME_PROMPT(groupName)), clientRef);
+                                }
+                            }
+                        } catch (Exception e){
+                            e.printStackTrace();
+                            System.out.println(Constants.SERVER_IS_OFFLINE_CONN);
+                            clientRef.tell(PoisonPill.getInstance(), ActorRef.noSender());
+                        }
+                    }
+                    System.out.println(Constants.GROUP_RESPOND_TO_SOURCE(clientUserName, answer));
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+                System.out.println(targetUserName + " did not answer on time.");
+            }
         }
 
-        private static ActorRef getTargetActorRef(String targetname) {
-            Future<Object> rt = Patterns.ask(manager, new isUserExistMessage(targetname), timeout);
+        private static void groupSendText(String groupName, String msg){
+            ActorRef broadcastRouter =  validateGetRouterActor(groupName);
+            if (broadcastRouter == null){return;}
+            broadcastRouter.tell(new Broadcast( new TextMessage(
+                    Constants.PRINTING(groupName, clientUserName, msg))), clientRef);
+        }
+
+        private static void groupSendFile(String groupName, String filePath){
+            File file = new File(filePath);
+            if(!file.exists() || file.isDirectory()) {
+                System.out.println(Constants.NOT_EXIST(filePath));
+                return;
+            }
+
+            ActorRef broadcastRouter =  validateGetRouterActor(groupName);
+            if (broadcastRouter == null){return;}
+
+            String fileName =Paths.get(filePath).getFileName().toString();
+            try{
+                byte[] buffer = Files.readAllBytes(Paths.get(filePath));
+                broadcastRouter.tell( new Broadcast(  new AllBytesFileMessage(
+                        clientUserName, fileName, groupName, buffer)), clientRef);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        private static ActorRef validateGroupInvite(String groupName, String targetUserName) {
+            Future<Object> rt = Patterns.ask(manager, new validateGroupInvite(groupName, clientUserName, targetUserName), timeout);
             try {
                 Object result = Await.result(rt, timeout.duration());
                 if (result.getClass() == AddressMessage.class)
@@ -313,9 +355,43 @@ import java.util.concurrent.atomic.AtomicBoolean;
                 else
                     System.out.println(((ErrorMessage)result).error);
             } catch (Exception e) {
-                System.out.println("server offline");
+                e.printStackTrace();
+                System.out.println(Constants.SERVER_IS_OFFLINE_CONN);
+            }
+            return null;
+        }
+
+
+        private static ActorRef validateGetTargetActor(String targetname) {
+            Future<Object> rt = Patterns.ask(manager, new validateUserSendMessage(targetname), timeout);
+            try {
+                Object result = Await.result(rt, timeout.duration());
+                if (result.getClass() == AddressMessage.class)
+                    return  ((AddressMessage) result).targetactor;
+                else
+                    System.out.println(((ErrorMessage)result).error);
+            } catch (Exception e) {
+                e.printStackTrace();
+                System.out.println(Constants.SERVER_IS_OFFLINE_CONN);
+            }
+            return null;
+        }
+
+
+        private static ActorRef validateGetRouterActor(String groupName) {
+            Future<Object> rt = Patterns.ask(manager, new validateGroupSendMessage(groupName, clientUserName), timeout);
+            try {
+                Object result = Await.result(rt, timeout.duration());
+                if (result.getClass() == AddressMessage.class)
+                    return  ((AddressMessage) result).targetactor;
+                else
+                    System.out.println(((ErrorMessage)result).error);
+            } catch (Exception e) {
+                e.printStackTrace();
+                System.out.println(Constants.SERVER_IS_OFFLINE_CONN);
             }
             return null;
         }
     }
+
 

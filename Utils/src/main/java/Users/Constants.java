@@ -22,6 +22,10 @@ public class Constants{
     public static String DISCONNECT_FAIL(String username){return username + " already disconnected!";}
     public static String DISCONNECT_SUCC(String username){return username + " has been disconnected successfully!";}
     public static String NOT_EXIST(String notexits){return notexits + " does not exist!";}
+
+
+
+
     public static String GROUP_CREATE_SUCC(String groupname){return groupname + " created successfully!";}
     public static String GROUP_CREATE_FAIL(String groupname){return groupname + " already exists!";}
     public static String GROUP_LEAVE_FAIL(String groupname, String sourceusername){return sourceusername + " is not in " + groupname + "!";}
@@ -33,6 +37,11 @@ public class Constants{
     public static String GROUP_NOT_HAVE_PREVILEDGES(String groupname){return "You are neither an admin nor a co-admin of " + groupname + "!";}
     public static String GROUP_TARGET_ALREADY_BELONGS(String targetusername, String groupname){return targetusername+ " is already in " + groupname + "!";}
     public static String GROUP_RESPOND_TO_SOURCE(String username, String answer){return username+ " responded to group invite with the following answer: " + answer;}
+    public static String GROUP_INVITE_PROMPT(String groupName){ return "You have been invited to " + groupName + ", Accept?";}
+    public static String GROUP_WELCOME_PROMPT(String groupName){ return "Welcome to " + groupName + "!";}
+
+
+
     public static String PRINTING(String action, String sourcename, String message){
         Date date = new Date();
         SimpleDateFormat formatter = new SimpleDateFormat("dd-MM-yyyy HH:mm");

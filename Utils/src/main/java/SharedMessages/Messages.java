@@ -1,8 +1,6 @@
 package SharedMessages;
 
 import akka.actor.ActorRef;
-
-import java.io.OutputStream;
 import java.io.Serializable;
 
 public class Messages implements Serializable {
@@ -42,11 +40,34 @@ public class Messages implements Serializable {
         }
     }
 
-    public static class isUserExistMessage implements Serializable {
+    public static class validateUserSendMessage implements Serializable {
         public final String targetusername;
 
-        public isUserExistMessage(String targetusername) {
+        public validateUserSendMessage(String targetusername) {
             this.targetusername = targetusername;
+        }
+    }
+
+    public static class validateGroupSendMessage implements Serializable {
+        public final String groupName;
+        public final String sourceName;
+
+
+        public validateGroupSendMessage(String groupName, String sourceName) {
+            this.groupName = groupName;
+            this.sourceName = sourceName;
+        }
+    }
+
+    public static class validateGroupInvite implements Serializable {
+        public final String targetUserName;
+        public final String groupName;
+        public final String sourceUserName;
+
+        public validateGroupInvite(String groupName, String sourceUserName, String targetUserName) {
+            this.sourceUserName = sourceUserName;
+            this.targetUserName = targetUserName;
+            this.groupName = groupName;
         }
     }
 
@@ -58,23 +79,6 @@ public class Messages implements Serializable {
         }
     }
 
-
-    public static class FileMessage implements Serializable {
-        public final String userName;
-        public final String fileName;
-        public final byte[] buffer;
-        public final int bytesRead;
-        public final boolean isDone;
-        public final OutputStream outputStream;
-        public FileMessage(String userName, String fileName, byte[] buffer, int bytesRead, OutputStream outputStream, boolean isDone) {
-            this.userName = userName;
-            this.fileName = fileName;
-            this.buffer = buffer;
-            this.bytesRead = bytesRead;
-            this.isDone = isDone;
-            this.outputStream = outputStream;
-        }
-    }
 
     public static class AllBytesFileMessage implements Serializable {
         public final String userName;
@@ -110,57 +114,28 @@ public class Messages implements Serializable {
         }
     }
 
-    public static class GroupSendTextMessage implements Serializable {
-        public final String groupname;
-        public final String sourcename;
-        public final String message;
-
-        public GroupSendTextMessage(String groupname, String sourcename, String message) {
-            this.groupname = groupname;
-            this.sourcename = sourcename;
-            this.message = message;
-
-        }
-    }
-
-    public static class GroupSendFileMessage implements Serializable {
-        public final String groupname;
-        public final String sourcename;
-        public final String fileName;
-        public final byte[] buffer;
-
-        public GroupSendFileMessage(String groupname, String sourcename, String fileName, byte[] buffer) {
-            this.groupname = groupname;
-            this.sourcename = sourcename;
-            this.fileName = fileName;
-            this.buffer = buffer;
-
-        }
-    }
 
     public static class GroupInviteMessage implements Serializable {
-        public final String groupname;
-        public final String sourceusername;
-        public final String targetusername;
+        public final String groupName;
+        public final String sourceUserName;
+        public final String targetUserName;
 
-        public GroupInviteMessage(String groupname, String sourceusername, String targetusername) {
-            this.groupname = groupname;
-            this.sourceusername = sourceusername;
-            this.targetusername = targetusername;
+        public GroupInviteMessage(String groupName, String sourceUserName, String targetUserName) {
+            this.groupName = groupName;
+            this.sourceUserName = sourceUserName;
+            this.targetUserName = targetUserName;
         }
     }
 
     public static class GroupInviteRequestReply implements Serializable {
         public final String groupname;
-        public final String sourceusername;
         public final String text;
-        public final ActorRef sourceActor;
 
-        public GroupInviteRequestReply(String groupname, String sourceusername, String text, ActorRef sourceActor) {
+
+        public GroupInviteRequestReply(String groupname, String text) {
             this.groupname = groupname;
-            this.sourceusername = sourceusername;
             this.text = text;
-            this.sourceActor = sourceActor;
+
         }
     }
 
@@ -173,20 +148,11 @@ public class Messages implements Serializable {
         }
     }
 
+    public static class isSuccMessage implements Serializable {
+        public final boolean isSucc;
 
-    public static class printServerMessage implements Serializable {
-        public static void printServerMessage(Object message) {
-            if (message.getClass() == TextMessage.class)
-                System.out.println(((TextMessage) message).text);
-
-            if (message.getClass() == ErrorMessage.class)
-                System.out.println(((ErrorMessage) message).error);
-
-            if (message.getClass() == TextMessage.class)
-                System.out.println(((TextMessage) message).text);
-
-            else
-                System.out.println("Unknown message received to print");
+        public isSuccMessage(boolean isSucc) {
+            this.isSucc = isSucc;
         }
     }
 }

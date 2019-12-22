@@ -7,12 +7,8 @@ import Groups.GroupInfo;
 import akka.actor.*;
 import akka.event.Logging;
 import akka.event.LoggingAdapter;
-import akka.pattern.Patterns;
-import akka.util.Timeout;
-import scala.concurrent.Await;
-import scala.concurrent.Future;
+import akka.routing.Broadcast;
 
-import java.time.Duration;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
@@ -30,44 +26,55 @@ public class Manager extends AbstractActor {
     public
     Receive createReceive() {
         return receiveBuilder()
+                .match(validateUserSendMessage.class, this::onValidateUserSendMessage)
+                .match(validateGroupInvite.class, this::onValidateGroupInvite)
+                .match(validateGroupSendMessage.class, this::onValidateGroupSendMessage)
+
                 .match(ConnectionMessage.class, this::onConnect)
                 .match(DisconnectMessage.class, this::onDisconnect)
-                .match(isUserExistMessage.class, this::onIsUserExist)
                 .match(GroupCreateMessage.class,this::onGroupCreate)
                 .match(GroupLeaveMessage.class, this::onGroupLeave)
                 .match(GroupInviteMessage.class, this::onGroupInvite)
-                .match(GroupSendTextMessage.class, this::onGroupSendTextMessage)
-                .match(GroupSendFileMessage.class, this::onGroupSendFileMessage)
                 .build();
     }
 
-    private void onGroupSendTextMessage(GroupSendTextMessage groupTextMessage){
+    private void onValidateUserSendMessage(validateUserSendMessage msg) {
+        logger.info("Got a IsUserExistMessage");
+        if (!ValidateIsUserExist(msg.targetusername, true)) return;
+
+        ActorRef targetActor = usersMap.get(msg.targetusername).getActor();
+        getSender().tell(new AddressMessage(targetActor), ActorRef.noSender());
+    }
+
+    private void onValidateGroupSendMessage(validateGroupSendMessage msg) {
         logger.info("got a group send text message!");
-        if(!ValidateIsUserExist(groupTextMessage.sourcename, true)) return;
-        if(!ValidateIsGroupExist(groupTextMessage.groupname, true)) return;
-        if(!ValidateIsGroupContainsUser(groupsMap.get(groupTextMessage.groupname),
-                groupTextMessage.sourcename, true)) return;
+        if(!ValidateIsUserExist(msg.sourceName, true)) return;
+        if(!ValidateIsGroupExist(msg.groupName, true)) return;
+        if(!ValidateIsGroupContainsUser(groupsMap.get(msg.groupName),
+                msg.sourceName, true)) return;
 
-        groupsMap.get(groupTextMessage.groupname).
+        ActorRef broadcastRouter = groupsMap.get(msg.groupName).
                 getGroupRouter().
-                broadcastMessage((ActorCell) getContext(),
-                        usersMap.get(groupTextMessage.sourcename).getActor(),
-                        new TextMessage(groupTextMessage.message));
-        }
+                getBroadcastRouter((ActorCell) getContext(),
+                usersMap.get(msg.sourceName).getActor());
+        getSender().tell(new AddressMessage(broadcastRouter), ActorRef.noSender());
+    }
 
-    private void onGroupSendFileMessage(GroupSendFileMessage groupFileMessage){
-        logger.info("got a group send file message!");
-        if(!ValidateIsUserExist(groupFileMessage.sourcename, true)) return;
-        if(!ValidateIsGroupExist(groupFileMessage.groupname, true)) return;
-        if(!ValidateIsGroupContainsUser(groupsMap.get(groupFileMessage.groupname),
-                groupFileMessage.sourcename, true)) return;
+    private void onValidateGroupInvite(validateGroupInvite msg) {
+        logger.info("Got a invite Group Message");
+        String groupName = msg.groupName;
+        String sourceUserName = msg.sourceUserName;
+        String targetUserName = msg.targetUserName;
+        GroupInfo group = groupsMap.get(groupName); //returns null if doesn't exist. we will leave function in validator
+        // check all pre-conditions
+        if (!ValidateIsGroupExist(groupName, true)) return;
+        if (!ValidateIsGroupContainsUser(group, sourceUserName, true)) return;
+        if (!ValidateUserHasPriviledges(group, sourceUserName, true)) return;
+        if (!ValidateIsUserExist(targetUserName, true)) return;
+        if (ValidateIsGroupContainsUser(group, targetUserName, false)) return;
 
-        groupsMap.get(groupFileMessage.groupname).
-                getGroupRouter().
-                broadcastFile((ActorCell) getContext(),
-                        usersMap.get(groupFileMessage.sourcename).getActor(),
-                        new AllBytesFileMessage(groupFileMessage.sourcename, groupFileMessage.fileName,
-                                groupFileMessage.groupname, groupFileMessage.buffer));
+        ActorRef targetActor = usersMap.get(targetUserName).getActor();
+        getSender().tell(new AddressMessage(targetActor), ActorRef.noSender());
     }
 
     private void onConnect(ConnectionMessage connectMsg) {
@@ -95,14 +102,6 @@ public class Manager extends AbstractActor {
 
         logger.info("disconnecting user: " + disconnectMsg.username);
         logger.info("Debug- the users map:\n " + usersMap.toString());
-    }
-
-    private void onIsUserExist(isUserExistMessage msg) {
-        logger.info("Got a IsUserExistMessage");
-        if (!ValidateIsUserExist(msg.targetusername, true)) return;
-
-        ActorRef targetActor = usersMap.get(msg.targetusername).getActor();
-        getSender().tell(new AddressMessage(targetActor), ActorRef.noSender());
     }
 
     private void onGroupCreate(GroupCreateMessage createMsg) {
@@ -133,24 +132,25 @@ public class Manager extends AbstractActor {
         if (!ValidateIsGroupContainsUser(group, username, true)) return false;
 
         boolean deleteGroup = false;
-        GroupRouter groupRouter = group.getGroupRouter();
+       ActorRef broadcastRouter = group.getGroupRouter().
+               getBroadcastRouter((ActorCell) getContext(), sourceActor);
         switch (group.getUserGroupMode(username)){
             case ADMIN:
                 deleteGroup = true;
-                groupRouter.broadcastMessage((ActorCell) getContext(),
-                        sourceActor,
-                        new TextMessage(Constants.GROUP_ADMIN_LEAVE(groupname, username)));
+                broadcastRouter.tell( new Broadcast(
+                        new TextMessage(Constants.GROUP_ADMIN_LEAVE(groupname, username))),
+                        ActorRef.noSender());
 
             case CO_ADMIN:
-                groupRouter.broadcastMessage((ActorCell) getContext(),
-                        sourceActor,
-                        new TextMessage(Constants.GROUP_COADMIN_LEAVE_SUCC(groupname,username)));
+                broadcastRouter.tell( new Broadcast( new TextMessage(
+                        Constants.GROUP_COADMIN_LEAVE_SUCC(groupname,username))),
+                        ActorRef.noSender());
 
             case MUTED:
             case USER:
-                groupRouter.broadcastMessage((ActorCell) getContext(),
-                        sourceActor,
-                        new TextMessage(Constants.GROUP_LEAVE_SUCC(groupname, username)));
+                broadcastRouter.tell( new Broadcast(
+                        new TextMessage(Constants.GROUP_LEAVE_SUCC(groupname, username))),
+                        ActorRef.noSender());
                 removeUserFromGroup(groupname, username, group);
                 break;
             case NONE:
@@ -168,41 +168,10 @@ public class Manager extends AbstractActor {
 
     private void onGroupInvite(GroupInviteMessage inviteMsg) {
         logger.info("Got a invite Group Message");
-        String groupname = inviteMsg.groupname;
-        String sourceusername = inviteMsg.sourceusername;
-        String targetusername = inviteMsg.targetusername;
-        GroupInfo group = groupsMap.get(groupname); //returns null if doesn't exist. we will leave function in validator
-        // check all pre-conditions
-        if (!ValidateIsGroupExist(groupname, true)) return;
-        if (!ValidateIsGroupContainsUser(group, sourceusername, true)) return;
-        if (!ValidateUserHasPriviledges(group, sourceusername, true)) return;
-        if (!ValidateIsUserExist(targetusername, true)) return;
-        if (ValidateIsGroupContainsUser(group, targetusername, false)) return;
-
-        //pre-conditions checked!
-        logger.info("sends invite request to " + targetusername);
-        String msg = "You have been invited to " + groupname + ", Accept?";
-        ActorRef targetActor = usersMap.get(targetusername).getActor();
-        ActorRef sourceActor = usersMap.get(sourceusername).getActor();
-        final Timeout timeout = Timeout.create(Duration.ofSeconds(60)); //give user 1 minute to answer
-        Future<Object> rt = Patterns.ask(targetActor, new GroupInviteRequestReply(groupname, sourceusername, msg, sourceActor), timeout);
-        try {
-            Object result = Await.result(rt, timeout.duration());
-            if (result.getClass() == isAcceptInvite.class) {
-                if(((isAcceptInvite)result).isAccept){
-                    logger.info("adding " + targetusername + " to " + groupname);
-                    addUserToGroup(groupname, targetusername, group);
-                    targetActor.tell(new TextMessage("Welcome to " + groupname + "!"), ActorRef.noSender());
-                    logger.info("group after invite is: " + group.toString());
-                }
-                else {
-                    logger.info(targetusername + " declined group invitation. after invite is: " + group.toString());
-                }
-            }
-        } catch (Exception e) {
-            logger.info("took to much time for user to answer");
-            getSender().tell(new ErrorMessage(targetusername + " did not answer on time."), ActorRef.noSender());
-        }
+        GroupInfo group = groupsMap.get(inviteMsg.groupName); //returns null if doesn't exist. we will leave function in validator
+        addUserToGroup(inviteMsg.groupName, inviteMsg.targetUserName, group);
+        getSender().tell(new isSuccMessage(true), ActorRef.noSender());
+        logger.info("group after invite is: " + group.toString());
     }
 
     private void addUserToGroup(String groupname, String username, GroupInfo group) {

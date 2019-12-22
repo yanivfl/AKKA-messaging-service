@@ -57,7 +57,6 @@ public class ClientActor extends AbstractActor {
     }
 
     private void onErrorMessage(ErrorMessage errorMsg) {
-        logger.info(errorMsg.error); //TODO: delete
         System.out.println(errorMsg.error);
     }
 
@@ -72,9 +71,6 @@ public class ClientActor extends AbstractActor {
             e.printStackTrace();
         } finally {
             getSender().tell(new isAcceptInvite(isInviteAnswer.get()), myActorRef);
-            String answer = isInviteAnswer.get()? "yes" : "no";
-            reqMsg.sourceActor.tell(new TextMessage(
-                    Constants.GROUP_RESPOND_TO_SOURCE(clientUserName,answer )), myActorRef);
         }
     }
 }
