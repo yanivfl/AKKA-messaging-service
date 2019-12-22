@@ -43,7 +43,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
             while (!connect) {
                 userInput = scanner.nextLine();
                 command = userInput.split("\\s+");
-                if ( command.length != 3 || !command[0].equals("/user") || !command[1].equals("connect"))
+                if (command.length != 3 || !command[0].equals("/user") || !command[1].equals("connect"))
                     System.out.println("Before any chat activity, you must connect");
                 else
                     onConnect(command[2]);
@@ -54,7 +54,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
                 userInput = scanner.nextLine();
                 command = userInput.split("\\s+");
 
-                if(expectingInviteAnswer.get()){
+                if (expectingInviteAnswer.get()) {
                     getInviteAnswer(command);
                     continue;
                 }
@@ -80,12 +80,12 @@ import java.util.concurrent.atomic.AtomicBoolean;
          * Auxiliary methods
          **/
 
-        private static void getInviteAnswer(String[] command){
-            if(command.length != 1){
+        private static void getInviteAnswer(String[] command) {
+            if (command.length != 1) {
                 System.out.println("Answer must be \"yes\" or \"no\" (more than 1 word)");
                 return;
             }
-            switch (command[0]){
+            switch (command[0]) {
                 case "yes":
                 case "no":
                     isInviteAnswer.set(
@@ -109,7 +109,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
             switch (command[1]) { // /user disconnect
                 case "disconnect":
-                    if(command.length ==2){
+                    if (command.length == 2) {
                         onDisconnect();
                         return;
                     }
@@ -130,12 +130,12 @@ import java.util.concurrent.atomic.AtomicBoolean;
         private static void groupCommandSwitch(String[] command) {
             switch (command[1]) {
                 case "create":
-                    if(command.length ==3){
+                    if (command.length == 3) {
                         onGroupCreate(command[2]);
                         return;
                     }
                 case "leave":
-                    if(command.length ==3){
+                    if (command.length == 3) {
                         onGroupLeave(command[2]);
                         return;
                     }
@@ -156,13 +156,13 @@ import java.util.concurrent.atomic.AtomicBoolean;
         private static void groupSendCommandSwitch(String[] command) {
             switch (command[2]) {
                 case "text":
-                    if(command.length >= 5){
-                        groupSendText(command[3], extaractMsg(command, 4) );
+                    if (command.length >= 5) {
+                        groupSendText(command[3], extaractMsg(command, 4));
                         return;
                     }
                 case "file":
-                    if(command.length == 5){
-                        groupSendFile(command[3], command[4] );
+                    if (command.length == 5) {
+                        groupSendFile(command[3], command[4]);
                         return;
                     }
             }
@@ -172,14 +172,14 @@ import java.util.concurrent.atomic.AtomicBoolean;
         private static void groupUserCommandSwitch(String[] command) {
             switch (command[2]) {
                 case "invite":
-                    if(command.length ==5){
+                    if (command.length == 5) {
                         onGroupInvite(command[3], command[4]);
                         return;
                     }
                 case "remove":
-                    if(command.length ==5) {
+                    if (command.length == 5) {
                         onGroupRemove(command[3], command[4]);
-                        break;
+                        return;
                     }
                 case "mute":
                     System.out.println("mute not implement");
@@ -194,12 +194,12 @@ import java.util.concurrent.atomic.AtomicBoolean;
         private static void coadminCommandSwitch(String[] command) {
             switch (command[2]) {
                 case "add":
-                    if(command.length ==5) {
+                    if (command.length == 5) {
                         onCoadminAdd(command[3], command[4]);
                         break;
                     }
                 case "remove":
-                    if(command.length ==5) {
+                    if (command.length == 5) {
                         onCoadminRemove(command[3], command[4]);
                         break;
                     }
@@ -219,7 +219,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
             /**
              * Connecting a user to the server - clientActor send Ask message to manager to connect
              **/
-            clientRef =  system.actorOf(ClientActor.props(isInviteAnswer, expectingInviteAnswer, waitingObject),  Constants.CLIENT +"-"+ username);   // Creating Client actor
+            clientRef = system.actorOf(ClientActor.props(isInviteAnswer, expectingInviteAnswer, waitingObject), Constants.CLIENT + "-" + username);   // Creating Client actor
             ConnectionMessage connMsg = new ConnectionMessage(username, clientRef);
             Future<Object> rt = Patterns.ask(manager, connMsg, timeout);
             try {
@@ -227,9 +227,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
                 if (result.getClass() == TextMessage.class) {
                     clientUserName = connMsg.username;
                     connect = true;
-                    System.out.println(((TextMessage)result).text);
+                    System.out.println(((TextMessage) result).text);
                 } else
-                    System.out.println(((ErrorMessage)result).error);
+                    System.out.println(((ErrorMessage) result).error);
 
             } catch (Exception e) {
                 e.printStackTrace();
@@ -242,15 +242,14 @@ import java.util.concurrent.atomic.AtomicBoolean;
             /**
              * Disconnecting a user from the server - clientActor send Ask message to manager to disconnect
              **/
-            Future<Object> rt = Patterns.ask(manager, new DisconnectMessage(clientUserName) , timeout);
+            Future<Object> rt = Patterns.ask(manager, new DisconnectMessage(clientUserName), timeout);
             try {
                 Object result = Await.result(rt, timeout.duration());
                 if (result.getClass() == TextMessage.class) {
                     connect = false;
                     System.out.println(((TextMessage) result).text);
-                }
-                else
-                    System.out.println(((ErrorMessage)result).error);
+                } else
+                    System.out.println(((ErrorMessage) result).error);
 
             } catch (Exception e) {
                 e.printStackTrace();
@@ -261,21 +260,23 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
         private static void onChatTextualMessage(String targetname, String msg) {
             ActorRef targetactor = validateGetTargetActor(targetname);
-            if (targetactor!=null)
+            if (targetactor != null)
                 targetactor.tell(new TextMessage(Constants.PRINTING(Constants.ACTION_USER, clientUserName, msg)), clientRef);
         }
 
-        private static void onChatBinaryMessage(String targetName, String filePath)  {
+        private static void onChatBinaryMessage(String targetName, String filePath) {
             ActorRef targetactor = validateGetTargetActor(targetName); //prints error message inside
-            if (targetactor==null) { return;}
+            if (targetactor == null) {
+                return;
+            }
             File file = new File(filePath);
-            if(!file.exists() || file.isDirectory()) {
+            if (!file.exists() || file.isDirectory()) {
                 System.out.println(Constants.NOT_EXIST(filePath));
                 return;
             }
 
-            String fileName =Paths.get(filePath).getFileName().toString();
-            try{
+            String fileName = Paths.get(filePath).getFileName().toString();
+            try {
                 byte[] buffer = Files.readAllBytes(Paths.get(filePath));
                 targetactor.tell(new AllBytesFileMessage(clientUserName, fileName, Constants.ACTION_USER, buffer), clientRef);
             } catch (IOException e) {
@@ -292,26 +293,28 @@ import java.util.concurrent.atomic.AtomicBoolean;
             manager.tell(new GroupLeaveMessage(groupname, clientUserName), clientRef);
         }
 
-        private static void onGroupInvite(String groupName, String targetUserName)  {
+        private static void onGroupInvite(String groupName, String targetUserName) {
             ActorRef targetActor = validateGroupInvite(groupName, targetUserName);
-            if (targetActor==null){ return; }
+            if (targetActor == null) {
+                return;
+            }
 
             final Timeout userTimeout = Timeout.create(Duration.ofSeconds(60)); //give user 1 minute to answer
-            Future<Object> rt = Patterns.ask(targetActor, new GroupInviteRequestReply(groupName,  Constants.GROUP_INVITE_PROMPT(groupName)), userTimeout);
+            Future<Object> rt = Patterns.ask(targetActor, new GroupInviteRequestReply(groupName, Constants.GROUP_INVITE_PROMPT(groupName)), userTimeout);
             try {
                 Object result = Await.result(rt, userTimeout.duration());
                 if (result.getClass() == isAcceptInvite.class) {
-                    String answer = ((isAcceptInvite)result).isAccept? "yes" : "no";
-                    if(((isAcceptInvite)result).isAccept){
+                    String answer = ((isAcceptInvite) result).isAccept ? "yes" : "no";
+                    if (((isAcceptInvite) result).isAccept) {
                         rt = Patterns.ask(manager, new GroupInviteMessage(groupName, clientUserName, targetUserName), timeout);
                         try {
                             result = Await.result(rt, timeout.duration());
                             if (result.getClass() == isSuccMessage.class) {
-                                if(((isSuccMessage)result).isSucc){
+                                if (((isSuccMessage) result).isSucc) {
                                     targetActor.tell(new TextMessage(Constants.GROUP_WELCOME_PROMPT(groupName)), clientRef);
                                 }
                             }
-                        } catch (Exception e){
+                        } catch (Exception e) {
                             e.printStackTrace();
                             System.out.println(Constants.SERVER_IS_OFFLINE_CONN);
                             clientRef.tell(PoisonPill.getInstance(), ActorRef.noSender());
@@ -325,55 +328,53 @@ import java.util.concurrent.atomic.AtomicBoolean;
             }
         }
 
-        private static void groupSendText(String groupName, String msg){
-            ActorRef broadcastRouter =  validateGetRouterActor(groupName);
-            if (broadcastRouter == null){return;}
-            broadcastRouter.tell(new Broadcast( new TextMessage(
+        private static void groupSendText(String groupName, String msg) {
+            ActorRef broadcastRouter = validateGetRouterActor(groupName);
+            if (broadcastRouter == null) {
+                return;
+            }
+            broadcastRouter.tell(new Broadcast(new TextMessage(
                     Constants.PRINTING(groupName, clientUserName, msg))), clientRef);
         }
 
-        private static void groupSendFile(String groupName, String filePath){
+        private static void groupSendFile(String groupName, String filePath) {
             File file = new File(filePath);
-            if(!file.exists() || file.isDirectory()) {
+            if (!file.exists() || file.isDirectory()) {
                 System.out.println(Constants.NOT_EXIST(filePath));
                 return;
             }
-
-        private static void onGroupRemove(String groupname, String targetusername) {
-            manager.tell(new GroupRemoveMessage(groupname, clientUserName, targetusername), clientRef);
-        }
-
-        private static void onCoadminAdd(String groupname, String targetusername) {
-            manager.tell(new GroupCoadminAddMessage(groupname, clientUserName, targetusername), clientRef);
-        }
-
-        private static void onCoadminRemove(String groupname, String targetusername) {
-            manager.tell(new GroupCoadminRemoveMessage(groupname, clientUserName, targetusername), clientRef);
-        }
-
-        private static ActorRef getTargetActorRef(String targetname) {
-            Future<Object> rt = Patterns.ask(manager, new isUserExistMessage(targetname), timeout);
-            ActorRef broadcastRouter =  validateGetRouterActor(groupName);
-            if (broadcastRouter == null){return;}
-
-            String fileName =Paths.get(filePath).getFileName().toString();
-            try{
+            ActorRef broadcastRouter = validateGetRouterActor(groupName);
+            if (broadcastRouter == null) { return; }
+            String fileName = Paths.get(filePath).getFileName().toString();
+            try {
                 byte[] buffer = Files.readAllBytes(Paths.get(filePath));
-                broadcastRouter.tell( new Broadcast(  new AllBytesFileMessage(
+                broadcastRouter.tell(new Broadcast(new AllBytesFileMessage(
                         clientUserName, fileName, groupName, buffer)), clientRef);
             } catch (IOException e) {
                 e.printStackTrace();
             }
         }
 
-        private static ActorRef validateGroupInvite(String groupName, String targetUserName) {
+        private static void onGroupRemove (String groupname, String targetusername){
+            manager.tell(new GroupRemoveMessage(groupname, clientUserName, targetusername), clientRef);
+        }
+
+        private static void onCoadminAdd (String groupname, String targetusername){
+            manager.tell(new GroupCoadminAddMessage(groupname, clientUserName, targetusername), clientRef);
+        }
+
+        private static void onCoadminRemove (String groupname, String targetusername){
+            manager.tell(new GroupCoadminRemoveMessage(groupname, clientUserName, targetusername), clientRef);
+        }
+
+        private static ActorRef validateGroupInvite (String groupName, String targetUserName){
             Future<Object> rt = Patterns.ask(manager, new validateGroupInvite(groupName, clientUserName, targetUserName), timeout);
             try {
                 Object result = Await.result(rt, timeout.duration());
                 if (result.getClass() == AddressMessage.class)
-                    return  ((AddressMessage) result).targetactor;
+                    return ((AddressMessage) result).targetactor;
                 else
-                    System.out.println(((ErrorMessage)result).error);
+                    System.out.println(((ErrorMessage) result).error);
             } catch (Exception e) {
                 e.printStackTrace();
                 System.out.println(Constants.SERVER_IS_OFFLINE_CONN);
@@ -382,14 +383,14 @@ import java.util.concurrent.atomic.AtomicBoolean;
         }
 
 
-        private static ActorRef validateGetTargetActor(String targetname) {
+        private static ActorRef validateGetTargetActor (String targetname){
             Future<Object> rt = Patterns.ask(manager, new validateUserSendMessage(targetname), timeout);
             try {
                 Object result = Await.result(rt, timeout.duration());
                 if (result.getClass() == AddressMessage.class)
-                    return  ((AddressMessage) result).targetactor;
+                    return ((AddressMessage) result).targetactor;
                 else
-                    System.out.println(((ErrorMessage)result).error);
+                    System.out.println(((ErrorMessage) result).error);
             } catch (Exception e) {
                 e.printStackTrace();
                 System.out.println(Constants.SERVER_IS_OFFLINE_CONN);
@@ -398,14 +399,14 @@ import java.util.concurrent.atomic.AtomicBoolean;
         }
 
 
-        private static ActorRef validateGetRouterActor(String groupName) {
+        private static ActorRef validateGetRouterActor (String groupName){
             Future<Object> rt = Patterns.ask(manager, new validateGroupSendMessage(groupName, clientUserName), timeout);
             try {
                 Object result = Await.result(rt, timeout.duration());
                 if (result.getClass() == AddressMessage.class)
-                    return  ((AddressMessage) result).targetactor;
+                    return ((AddressMessage) result).targetactor;
                 else
-                    System.out.println(((ErrorMessage)result).error);
+                    System.out.println(((ErrorMessage) result).error);
             } catch (Exception e) {
                 e.printStackTrace();
                 System.out.println(Constants.SERVER_IS_OFFLINE_CONN);
@@ -413,5 +414,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
             return null;
         }
     }
+
 
 

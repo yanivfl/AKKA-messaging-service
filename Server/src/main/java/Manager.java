@@ -41,8 +41,6 @@ public class Manager extends AbstractActor {
                 .match(GroupLeaveMessage.class, this::onGroupLeave)
                 .match(GroupInviteMessage.class, this::onGroupInvite)
                 .match(GroupRemoveMessage.class, this::onGroupRemove)
-                .match(GroupSendTextMessage.class, this::onGroupSendTextMessage)
-                .match(GroupSendFileMessage.class, this::onGroupSendFileMessage)
                 .match(GroupCoadminAddMessage.class, this::onGroupCoadminAddMessage)
                 .match(GroupCoadminRemoveMessage.class, this::onGroupCoadminRemoveMessage)
                 .build();
