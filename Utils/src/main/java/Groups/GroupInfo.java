@@ -35,7 +35,7 @@ public class GroupInfo {
 
     public void setGroupName(String groupName) { this.groupName = groupName; }
 
-    public String getAdmin() { return admin; }
+    public boolean isAdmin(String username) { return admin.equals(username); }
 
     public List<String> getCoAdmins() { return coAdmins; }
 
@@ -65,6 +65,15 @@ public class GroupInfo {
                 mutedusers.contains(username)? groupMode.MUTED:
                 users.contains(username)? groupMode.USER:
                 groupMode.NONE;
+    }
+    public void promoteToCoadmin(String username){
+        if (mutedusers.contains(username)) {mutedusers.remove(username);}
+        if (users.contains(username)) {users.remove(username);}
+        coAdmins.add(username);
+    }
+    public void demoteCoadmin(String username){
+        users.add(username);
+        coAdmins.remove(username);
     }
 
     private boolean removeAdmin(String username){

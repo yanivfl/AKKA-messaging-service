@@ -57,7 +57,6 @@ public class ClientActor extends AbstractActor {
     }
 
     private void onErrorMessage(ErrorMessage errorMsg) {
-        logger.info(errorMsg.error); //TODO: delete
         System.out.println(errorMsg.error);
     }
 

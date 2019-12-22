@@ -164,6 +164,42 @@ public class Messages implements Serializable {
         }
     }
 
+    public static class GroupRemoveMessage implements Serializable {
+        public final String groupname;
+        public final String sourceusername;
+        public final String targetusername;
+
+        public GroupRemoveMessage(String groupname, String sourceusername, String targetusername) {
+            this.groupname = groupname;
+            this.sourceusername = sourceusername;
+            this.targetusername = targetusername;
+        }
+    }
+
+    public static class GroupCoadminAddMessage implements Serializable {
+        public final String groupname;
+        public final String sourceusername;
+        public final String targetusername;
+
+        public GroupCoadminAddMessage(String groupname, String sourceusername, String targetusername) {
+            this.groupname = groupname;
+            this.sourceusername = sourceusername;
+            this.targetusername = targetusername;
+        }
+    }
+
+    public static class GroupCoadminRemoveMessage implements Serializable {
+        public final String groupname;
+        public final String sourceusername;
+        public final String targetusername;
+
+        public GroupCoadminRemoveMessage(String groupname, String sourceusername, String targetusername) {
+            this.groupname = groupname;
+            this.sourceusername = sourceusername;
+            this.targetusername = targetusername;
+        }
+    }
+
     public static class isAcceptInvite implements Serializable {
         public final boolean isAccept;
 

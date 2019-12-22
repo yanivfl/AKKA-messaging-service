@@ -31,8 +31,10 @@ public class Constants{
     public static String GROUP_MUTE(String groupname, String time){return "You are muted for" + time + " in " + groupname + "!";}
     public static String GROUP_NOT_BELONG(String groupname){return "You are not part of " + groupname + "!";}
     public static String GROUP_NOT_HAVE_PREVILEDGES(String groupname){return "You are neither an admin nor a co-admin of " + groupname + "!";}
+    public static String GROUP_ALREADY_HAVE_PREVILEDGES(String groupname, String username){return username+ " already have an admin or a co-admin privileges in " + groupname + "!";}
     public static String GROUP_TARGET_ALREADY_BELONGS(String targetusername, String groupname){return targetusername+ " is already in " + groupname + "!";}
     public static String GROUP_RESPOND_TO_SOURCE(String username, String answer){return username+ " responded to group invite with the following answer: " + answer;}
+    public static String GROUP_ACTION_ON_ADMIN(String groupname, String sourceusername){return " action denied because " + sourceusername+ " is admin in " + groupname;}
     public static String PRINTING(String action, String sourcename, String message){
         Date date = new Date();
         SimpleDateFormat formatter = new SimpleDateFormat("dd-MM-yyyy HH:mm");
