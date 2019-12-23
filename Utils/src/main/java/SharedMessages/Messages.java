@@ -6,7 +6,7 @@ import java.io.Serializable;
 public class Messages implements Serializable {
 
 
-    public static class DisconnectMessage implements Serializable {
+    public static class DisconnectMessage extends Messages {
         public final String userName;
 
         public DisconnectMessage(String clientUserName) {
@@ -14,7 +14,7 @@ public class Messages implements Serializable {
         }
     }
 
-    public static class ConnectionMessage implements Serializable {
+    public static class ConnectionMessage extends Messages {
         public final String userName;
         public final ActorRef client;
 
@@ -24,7 +24,7 @@ public class Messages implements Serializable {
         }
     }
 
-    public static class ErrorMessage implements Serializable {
+    public static class ErrorMessage extends Messages {
         public final String error;
 
         public ErrorMessage(String error) {
@@ -32,7 +32,7 @@ public class Messages implements Serializable {
         }
     }
 
-    public static class TextMessage implements Serializable {
+    public static class TextMessage extends Messages {
         public final String text;
 
         public TextMessage(String text) {
@@ -40,7 +40,7 @@ public class Messages implements Serializable {
         }
     }
 
-    public static class validateUserSendMessage implements Serializable {
+    public static class validateUserSendMessage extends Messages {
         public final String targetUserName;
 
         public validateUserSendMessage(String targetUserName) {
@@ -48,7 +48,7 @@ public class Messages implements Serializable {
         }
     }
 
-    public static class validateGroupSendMessage implements Serializable {
+    public static class validateGroupSendMessage extends Messages {
         public final String groupName;
         public final String sourceName;
 
@@ -59,7 +59,7 @@ public class Messages implements Serializable {
         }
     }
 
-    public static class validateGroupInvite implements Serializable {
+    public static class validateGroupInvite extends Messages {
         public final String targetUserName;
         public final String groupName;
         public final String sourceUserName;
@@ -71,7 +71,7 @@ public class Messages implements Serializable {
         }
     }
 
-    public static class AddressMessage implements Serializable {
+    public static class AddressMessage extends Messages {
         public final ActorRef targetActor;
 
         public AddressMessage(ActorRef targetActor) {
@@ -80,7 +80,7 @@ public class Messages implements Serializable {
     }
 
 
-    public static class AllBytesFileMessage implements Serializable {
+    public static class AllBytesFileMessage extends Messages {
         public final String userName;
         public final String fileName;
         public final String action;
@@ -94,7 +94,7 @@ public class Messages implements Serializable {
         }
     }
 
-    public static class GroupCreateMessage implements Serializable {
+    public static class GroupCreateMessage extends Messages {
         public final String userName;
         public final String groupName;
 
@@ -104,7 +104,7 @@ public class Messages implements Serializable {
         }
     }
 
-    public static class GroupLeaveMessage implements Serializable {
+    public static class GroupLeaveMessage extends Messages {
         public final String groupName;
         public final String userName;
 
@@ -115,7 +115,7 @@ public class Messages implements Serializable {
     }
 
 
-    public static class GroupInviteMessage implements Serializable {
+    public static class GroupInviteMessage extends Messages {
         public final String groupName;
         public final String sourceUserName;
         public final String targetUserName;
@@ -127,19 +127,19 @@ public class Messages implements Serializable {
         }
     }
 
-    public static class GroupInviteRequestReply implements Serializable {
+    public static class GroupInviteRequestReplyMessage extends Messages {
         public final String groupName;
         public final String text;
 
 
-        public GroupInviteRequestReply(String groupName, String text) {
+        public GroupInviteRequestReplyMessage(String groupName, String text) {
             this.groupName = groupName;
             this.text = text;
 
         }
     }
 
-    public static class GroupRemoveMessage implements Serializable {
+    public static class GroupRemoveMessage extends Messages {
         public final String groupName;
         public final String sourceUserName;
         public final String targetUserName;
@@ -151,7 +151,7 @@ public class Messages implements Serializable {
         }
     }
 
-    public static class GroupMuteMessage implements Serializable {
+    public static class GroupMuteMessage extends Messages {
         public final String groupName;
         public final String sourceUserName;
         public final String targetUserName;
@@ -165,7 +165,7 @@ public class Messages implements Serializable {
         }
     }
 
-    public static class GroupUnMuteMessage implements Serializable {
+    public static class GroupUnMuteMessage extends Messages {
         public final String groupName;
         public final String sourceUserName;
         public final String targetUserName;
@@ -177,7 +177,7 @@ public class Messages implements Serializable {
         }
     }
 
-    public static class GroupCoAdminAddMessage implements Serializable {
+    public static class GroupCoAdminAddMessage extends Messages {
         public final String groupName;
         public final String sourceUserName;
         public final String targetUserName;
@@ -189,7 +189,7 @@ public class Messages implements Serializable {
         }
     }
 
-    public static class GroupCoAdminRemoveMessage implements Serializable {
+    public static class GroupCoAdminRemoveMessage extends Messages {
         public final String groupName;
         public final String sourceUserName;
         public final String targetUserName;
@@ -201,7 +201,7 @@ public class Messages implements Serializable {
         }
     }
 
-    public static class isAcceptInvite implements Serializable {
+    public static class isAcceptInvite extends Messages {
         public final boolean isAccept;
 
 
@@ -210,7 +210,7 @@ public class Messages implements Serializable {
         }
     }
 
-    public static class isSuccMessage implements Serializable {
+    public static class isSuccMessage extends Messages {
         public final boolean isSucc;
 
         public isSuccMessage(boolean isSucc) {

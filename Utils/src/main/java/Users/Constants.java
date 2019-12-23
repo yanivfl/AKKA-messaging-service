@@ -4,7 +4,6 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 
 public class Constants{
-    public static final int BUFFER_SIZE = 4096; // 4KB=BUFFER_SIZE
     public static final int MINUTE = 60; // 4KB=BUFFER_SIZE
     public static final String ACTION_USER = "user";
     public static final String CHAT_DOWNLOADS_DIR = "Chat_Downloads";
@@ -26,7 +25,7 @@ public class Constants{
 
 
 
-
+    public static String GROUP_INVITE_DIDNT_ANSWER(String targetUserName){return targetUserName + " did not answer on time.";}
     public static String GROUP_CREATE_SUCC(String groupName){return groupName + " created successfully!";}
     public static String GROUP_CREATE_FAIL(String groupName){return groupName + " already exists!";}
     public static String GROUP_LEAVE_FAIL(String groupName, String sourceUserName){return sourceUserName + " is not in " + groupName + "!";}

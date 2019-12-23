@@ -1,9 +1,12 @@
 package Groups;
 
 import akka.actor.ActorRef;
+
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
-
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 
 public class GroupInfo {
@@ -37,14 +40,19 @@ public class GroupInfo {
 
     public GroupRouter getGroupRouter() { return groupRouter; }
 
+    private List<String> concatList(List<String> list1, List<String> list2){
+        return Stream.concat(list1.stream(), list2.stream())
+                .collect(Collectors.toList());
+    }
+
     public List<String> getAllUsers() {
-        List<String> allUsers = new LinkedList<>();
-        if(!admin.equals(""))
-            allUsers.add(admin);
-        allUsers.addAll(coAdmins);
-        allUsers.addAll(mutedusers);
-        allUsers.addAll(users);
-        return allUsers;
+        List<String> adminList = admin.equals("")?
+                Collections.emptyList() :
+                Collections.singletonList(admin);
+        return concatList(
+                concatList(adminList, coAdmins),
+                concatList(mutedusers,users)
+        );
     }
 
     public boolean userHasPrivileges(String username){
@@ -59,22 +67,21 @@ public class GroupInfo {
                 groupMode.NONE;
     }
 
-    public void muteUser(String username){
-        if (coAdmins.contains(username)) {coAdmins.remove(username);}
-        if (users.contains(username)) {users.remove(username);}
+    public void muteUser(String username){ //TODO do all mute functionality
+        removeUsername(username);
         mutedusers.add(username);
     }
-
+    //TODO do all mute functionality
     public void unMuteUser(String username){
         mutedusers.remove(username);
         users.add(username);
     }
-
+    //TODO fix promote muted-> user -> co admin (use mute functionality!)
     public void promoteToCoAdmin(String username){
-        if (mutedusers.contains(username)) {mutedusers.remove(username);}
-        if (users.contains(username)) {users.remove(username);}
+        removeUsername(username);
         coAdmins.add(username);
     }
+    //TODO fix promote co-admin-> user -> muted (use unMute functionality!)
     public void demoteCoAdmin(String username){
         users.add(username);
         coAdmins.remove(username);

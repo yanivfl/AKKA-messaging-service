@@ -1,21 +1,16 @@
 import SharedMessages.Messages.*;
 import Users.Constants;
-
 import Users.SharedFucntions;
 import akka.actor.*;
-import akka.event.Logging;
-import akka.event.LoggingAdapter;
-
 import java.io.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 
 public class ClientActor extends AbstractActor {
     private final ActorRef myActorRef = this.self();
-    private LoggingAdapter logger = Logging.getLogger(getContext().system(), this); //TODO: delete?
     private AtomicBoolean isInviteAnswer;
     private AtomicBoolean expectingInviteAnswer;
-    private Object waitingObject;
+    private final Object waitingObject;
 
     public ClientActor(AtomicBoolean isInviteAnswer, AtomicBoolean expectingInviteAnswer, Object waitingObject) {
         this.isInviteAnswer = isInviteAnswer;
@@ -33,7 +28,7 @@ public class ClientActor extends AbstractActor {
                 .match(TextMessage.class, this::onTextMessage)
                 .match(AllBytesFileMessage.class, this::AllBytesFileMessage)
                 .match(ErrorMessage.class, this::onErrorMessage)
-                .match(GroupInviteRequestReply.class, this::onGroupInviteRequestReply)
+                .match(GroupInviteRequestReplyMessage.class, this::onGroupInviteRequestReplyMessage)
                 .build();
     }
 
@@ -54,7 +49,7 @@ public class ClientActor extends AbstractActor {
 
     private void onErrorMessage(ErrorMessage errorMsg) { System.out.println(errorMsg.error); }
 
-    private void onGroupInviteRequestReply(GroupInviteRequestReply reqMsg) {
+    private void onGroupInviteRequestReplyMessage(GroupInviteRequestReplyMessage reqMsg) {
         System.out.println(reqMsg.text);
         expectingInviteAnswer.set(true);
         try{

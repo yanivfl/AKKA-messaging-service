@@ -29,27 +29,28 @@ public class Manager extends AbstractActor {
     public
     Receive createReceive() {
         return receiveBuilder()
+                //validators from client
                 .match(validateUserSendMessage.class, this::onValidateUserSendMessage)
                 .match(validateGroupInvite.class, this::onValidateGroupInviteMessage)
                 .match(validateGroupSendMessage.class, this::onValidateGroupSendMessage)
 
+                //user reqs
                 .match(ConnectionMessage.class, this::onConnectMessage)
                 .match(DisconnectMessage.class, this::onDisconnectMessage)
 
-
+                //group reqs
                 .match(GroupCreateMessage.class,this::onGroupCreateMessage)
                 .match(GroupLeaveMessage.class, this::onGroupLeaveMessage)
                 .match(GroupInviteMessage.class, this::onGroupInviteMessage)
                 .match(GroupRemoveMessage.class, this::onGroupRemoveMessage)
                 .match(GroupMuteMessage.class, this::onGroupMuteMessage)
                 .match(GroupUnMuteMessage.class, this::onGroupUnMuteMessage)
-
-
                 .match(GroupCoAdminAddMessage.class, this::onGroupCoAdminAddMessage)
                 .match(GroupCoAdminRemoveMessage.class, this::onGroupCoAdminRemoveMessage)
                 .build();
     }
 
+    //*************************** Validators from client *******************************//
     private void onValidateUserSendMessage(validateUserSendMessage msg) {
         logger.info("Got a IsUserExistMessage");
         if (!ValidateIsUserExist(msg.targetUserName, true)) return;
@@ -91,6 +92,8 @@ public class Manager extends AbstractActor {
         getSender().tell(new AddressMessage(targetActor), ActorRef.noSender());
     }
 
+
+    //*************************** user Requests from client *******************************//
     private void onConnectMessage(ConnectionMessage connectMsg) {
         logger.info("Got a connection Message");
         if (ValidateIsUserExist(connectMsg.userName, false)) return;
@@ -107,10 +110,12 @@ public class Manager extends AbstractActor {
         if (!ValidateIsUserExist(disconnectMsg.userName, true)) return;
 
         List<String> usergroupNames = new LinkedList<>(usersMap.get(disconnectMsg.userName).getGroups());
-        for( String groupName : usergroupNames ){
-           if(!onGroupLeaveMessage(new GroupLeaveMessage(groupName, disconnectMsg.userName))){ return; }
-            logger.info(disconnectMsg.userName + " left " + groupName);
-        }
+
+        //return true if all user succescfully left all groups
+        if(!usergroupNames.stream().
+                allMatch(groupName -> onGroupLeaveMessage(
+                        new GroupLeaveMessage(groupName, disconnectMsg.userName)))) { return; }
+
         usersMap.remove(disconnectMsg.userName);
         getSender().tell(new TextMessage(Constants.DISCONNECT_SUCC(disconnectMsg.userName)), ActorRef.noSender());
 
@@ -118,6 +123,8 @@ public class Manager extends AbstractActor {
         logger.info("Debug- the users map:\n " + usersMap.toString());
     }
 
+
+    //*************************** Groups reqs from client *******************************//
     private void onGroupCreateMessage(GroupCreateMessage createMsg) {
         logger.info("Got a Create Group Message");
         if(ValidateIsGroupExist(createMsg.groupName, false)) return;
@@ -172,19 +179,22 @@ public class Manager extends AbstractActor {
                 return false;
         }
         if(deleteGroup){
-            for(String username : group.getAllUsers()){
-                removeUserFromGroup(groupName, username, group);
-            }
+            group.getAllUsers().
+                    forEach((username) -> removeUserFromGroup(groupName, username, group));
             groupsMap.remove(groupName);
         }
+        broadcastRouter.tell(PoisonPill.getInstance(), ActorRef.noSender());
+        logger.info(userName + " left " + groupName);
         return true;
     }
 
     private void onGroupInviteMessage(GroupInviteMessage inviteMsg) {
         logger.info("Got a invite Group Message");
+
         GroupInfo group = groupsMap.get(inviteMsg.groupName); //returns null if doesn't exist. we will leave function in validator
         addUserToGroup(inviteMsg.groupName, inviteMsg.targetUserName, group);
         getSender().tell(new isSuccMessage(true), ActorRef.noSender());
+
         logger.info("group after invite is: " + group.toString());
     }
 
@@ -194,6 +204,7 @@ public class Manager extends AbstractActor {
         String sourceUserName = RemoveMsg.sourceUserName;
         String targetUserName = RemoveMsg.targetUserName;
         GroupInfo group = groupsMap.get(groupName); //returns null if doesn't exist. we will leave function in validator
+
         // check all pre-conditions
         if (!ValidateIsGroupExist(groupName, true)) return;
         if (!ValidateIsUserExist(targetUserName, true)) return;
@@ -206,9 +217,11 @@ public class Manager extends AbstractActor {
 
         //pre-conditions checked!
         logger.info(targetUserName + " will be removed from the "+ groupName);
+
         ActorRef targetActor = usersMap.get(targetUserName).getActor();
         removeUserFromGroup(groupName, targetUserName, group);
         getSender().tell(new AddressMessage(targetActor), ActorRef.noSender());
+
         logger.info(group.toString());
     }
 
@@ -219,6 +232,7 @@ public class Manager extends AbstractActor {
         String targetUserName = muteMsg.targetUserName;
         int timeInMute = muteMsg.timeInSeconds;
         GroupInfo group = groupsMap.get(groupName); //returns null if doesn't exist. we will leave function in validator
+
         // check all pre-conditions
         if (!ValidateIsGroupExist(groupName, true)) return;
         if (!ValidateIsUserExist(targetUserName, true)) return;
@@ -229,7 +243,8 @@ public class Manager extends AbstractActor {
         if (ValidateIsUserAdmin(group, targetUserName, false)) return;
 
         //pre-conditions checked!
-        logger.info(targetUserName + " will be muted in the "+ groupName+ "for "+ timeInMute);
+        logger.info(targetUserName + " will be muted in the "+ groupName+ "for "+ timeInMute + " seconds");
+        //TODO move fucntionality to muteUser
         ActorRef targetActor = usersMap.get(targetUserName).getActor();
         group.muteUser(targetUserName);
         group.getGroupRouter().removeRoutee(targetActor); //for not getting broadcast
@@ -239,7 +254,6 @@ public class Manager extends AbstractActor {
         //Scheduling unMutedAutomatically() call in timeInMute second.
         Timer timer = new Timer();
         timer.schedule(new unMutedAutomatically(group,targetUserName,targetActor,timer), Constants.toSeconds(timeInMute));
-
     }
 
     private void onGroupUnMuteMessage(GroupUnMuteMessage unMuteMsg) {
@@ -248,14 +262,16 @@ public class Manager extends AbstractActor {
         String sourceUserName = unMuteMsg.sourceUserName;
         String targetUserName = unMuteMsg.targetUserName;
         GroupInfo group = groupsMap.get(groupName); //returns null if doesn't exist. we will leave function in validator
+
         // check all pre-conditions
         if (!ValidateIsGroupExist(groupName, true)) return;
         if (!ValidateIsUserExist(targetUserName, true)) return;
         if (!ValidateUserHasPriviledges(group, sourceUserName, true)) return;
         if(!ValidateIsGroupUserMuted(group, targetUserName, true)) return;
 
-        // pre-conditions checked! //TODO: LOCK ON Muted?
+        // pre-conditions checked!
         ActorRef targetActor = usersMap.get(targetUserName).getActor();
+        //TODO move fucntionality to unMuteUser
         group.unMuteUser(targetUserName);
         group.getGroupRouter().addRoutee(targetActor); // for getting broadcast
         getSender().tell(new AddressMessage(targetActor), ActorRef.noSender());
@@ -267,6 +283,7 @@ public class Manager extends AbstractActor {
         String sourceUserName = CoadminAddMsg.sourceUserName;
         String targetUserName = CoadminAddMsg.targetUserName;
         GroupInfo group = groupsMap.get(groupName); //returns null if doesn't exist. we will leave function in validator
+
         // check all pre-conditions
         if (!ValidateIsGroupExist(groupName, true)) return;
         if (!ValidateIsUserExist(targetUserName, true)) return;
@@ -292,6 +309,7 @@ public class Manager extends AbstractActor {
         String sourceUserName = CoadminRemoveMsg.sourceUserName;
         String targetUserName = CoadminRemoveMsg.targetUserName;
         GroupInfo group = groupsMap.get(groupName); //returns null if doesn't exist. we will leave function in validator
+
         // check all pre-conditions
         if (!ValidateIsGroupExist(groupName, true)) return;
         if (!ValidateIsUserExist(targetUserName, true)) return;
@@ -308,8 +326,6 @@ public class Manager extends AbstractActor {
         group.demoteCoAdmin(targetUserName);
         targetActor.tell(new TextMessage(msg), sourceActor);
         logger.info(group.toString());
-
-
     }
 
 
@@ -333,7 +349,7 @@ public class Manager extends AbstractActor {
 
 
 
-//****************************Validators**********************************
+//****************************Validators********************************** //TODO new file
 
     private boolean ValidateIsGroupUserMuted(GroupInfo group,String userName, boolean expectedPrivilege){
         boolean isMuted = group.isMuted(userName);
@@ -345,7 +361,6 @@ public class Manager extends AbstractActor {
             logger.info(Constants.GROUP_MUTED_ERROR);
             getSender().tell(new ErrorMessage(Constants.GROUP_MUTED_ERROR), ActorRef.noSender());
         }
-
         return isMuted;
     }
 
@@ -359,7 +374,6 @@ public class Manager extends AbstractActor {
             logger.info(Constants.GROUP_ACTION_ON_ADMIN(group.getGroupName(),userName));
             getSender().tell(new ErrorMessage(Constants.GROUP_ACTION_ON_ADMIN(group.getGroupName(),userName)), ActorRef.noSender());
         }
-
         return isAdmin;
     }
 
@@ -395,7 +409,6 @@ public class Manager extends AbstractActor {
             logger.info(Constants.GROUP_ALREADY_HAVE_PREVILEDGES(group.getGroupName(), userName));
             getSender().tell(new ErrorMessage(Constants.GROUP_ALREADY_HAVE_PREVILEDGES(group.getGroupName(), userName)), ActorRef.noSender());
         }
-
         if(!isPrivilege && expectedPrivilege){
             logger.info(Constants.GROUP_NOT_HAVE_PREVILEDGES(group.getGroupName()));
             getSender().tell(new ErrorMessage(Constants.GROUP_NOT_HAVE_PREVILEDGES(group.getGroupName())), ActorRef.noSender());
@@ -417,7 +430,7 @@ public class Manager extends AbstractActor {
         return isExist;
     }
 
-    class unMutedAutomatically extends TimerTask {
+    class unMutedAutomatically extends TimerTask { //TODO new file
 
         private final Timer timer;
         private GroupInfo group;

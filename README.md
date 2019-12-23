@@ -1,19 +1,27 @@
 Akka Remote Example in Java
 =========================
 
-## Introduction
-This project was made while testing the Akka Remoting features.
-It contains three modules; a Client, a Server and a LoggerEnvironment. The two types of Akka Remoting are tested; Creation and Lookup.
+TODOS:
+0. we must write that group leave messages, we understood that broadcast will be done as well
+(same as above, in addition:)
+1. README - containing the names and ids of the group.
+It will also contain the design of the Actor Model you’ve implemented using Akka,
+the different actors, hierarchy, implemented behaviors,
+and kinds of messages passed and their effect on behavior.
+Be sure to detail it to the fullest!
+
+2. kill clientref when disconnected, poison pill or something else.
+ - done - poisonpill, also killed all routers after broadcast. deleted killing after
+ server disconnect. 
+ 
+3. document all fucntions
+4. eliminate logs after client disconnect. other clients in group get info logs - done
+5. reuse send to server request. - ndone
+6. in manager, all for loops -> stream.map - done
 
 ##### Client
-The client uses remote lookup to get an `ActorSelection` of a Remote Actor (running on the Server.) and sends a message to it. 
 
 ##### Server
-The server creates a `CalculatorActor` and handles incoming messages.  
-The server also creates a `LoggingActor` which is (remotely) deployed on the `LoggerEnvironment`.
-
-##### LoggerEnvironment
-Essentially nothing more than a container. The server will create an actor on this environment.
 
 ## How to run
 You can run the program like every ordinary Java main program. Make sure you have `mvn clean install`ed the project before to get the Akka dependency.
