@@ -23,8 +23,6 @@ public class Manager extends AbstractActor {
     private LoggingAdapter logger = Logging.getLogger(getContext().getSystem(), this);
     private ConcurrentMap<String, UserInfo> usersMap = new ConcurrentHashMap<>();
     private ConcurrentMap<String, GroupInfo> groupsMap = new ConcurrentHashMap<>();
-    Timer timer;
-
 
 
     @Override
@@ -237,10 +235,10 @@ public class Manager extends AbstractActor {
         group.getGroupRouter().removeRoutee(targetActor); //for not getting broadcast
         getSender().tell(new AddressMessage(targetActor), ActorRef.noSender());
         logger.info(group.toString());
-        Timer timer = new Timer();
-        //Scheduling unMutedAutomatically() call in timeInMute second.
-        timer.schedule(new unMutedAutomatically(group,targetUserName,targetActor), timeInMute * 1000);
 
+        //Scheduling unMutedAutomatically() call in timeInMute second.
+        Timer timer = new Timer();
+        timer.schedule(new unMutedAutomatically(group,targetUserName,targetActor,timer), Constants.toSeconds(timeInMute));
 
     }
 
@@ -421,14 +419,16 @@ public class Manager extends AbstractActor {
 
     class unMutedAutomatically extends TimerTask {
 
+        private final Timer timer;
         private GroupInfo group;
         private ActorRef targetActor;
         private String targetUserName;
 
-        public unMutedAutomatically(GroupInfo group, String targetUserName, ActorRef targetActor) {
+        private unMutedAutomatically(GroupInfo group, String targetUserName, ActorRef targetActor, Timer timer) {
             this.group = group;
             this.targetUserName = targetUserName;
             this.targetActor = targetActor;
+            this.timer = timer;
         }
 
         @Override

@@ -5,6 +5,7 @@ import java.util.Date;
 
 public class Constants{
     public static final int BUFFER_SIZE = 4096; // 4KB=BUFFER_SIZE
+    public static final int MINUTE = 60; // 4KB=BUFFER_SIZE
     public static final String ACTION_USER = "user";
     public static final String CHAT_DOWNLOADS_DIR = "Chat_Downloads";
     public static final String MANAGER = "Manager";
@@ -52,6 +53,8 @@ public class Constants{
         SimpleDateFormat formatter = new SimpleDateFormat("dd-MM-yyyy HH:mm");
         return "["+ formatter.format(date) +"] [" + action + "] [" + sourceName + "] " + message;
     }
+
+    public static int toSeconds(int seconds){return seconds * 1000;}
 
 }
 

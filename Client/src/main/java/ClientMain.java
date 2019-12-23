@@ -17,8 +17,6 @@ import java.util.Scanner;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 
-//final Config config = ConfigFactory.load().withValue("akka.log-dead-letters", ConfigValueFactory.fromAnyRef("off"));
-
     class ClientMain {
         private static final ActorSystem system = ActorSystem.create(Constants.CLIENT_SYSTEM, ConfigFactory.load()); // Creating environment
         private static final ActorSelection manager = system.actorSelection(Constants.PATH_TO_MANAGER);
@@ -34,18 +32,11 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
         public static void main(String[] args) {
 
+            // verify that a connect command happen before any other command
+            logInAction();
+
             String userInput = "";
             String[] command = null;
-
-            // verify that a connect command happen before any other command
-            while (!connect) {
-                userInput = scanner.nextLine();
-                command = userInput.split("\\s+");
-                if (command.length != 3 || !command[0].equals("/user") || !command[1].equals("connect"))
-                    System.out.println("Before any chat activity, you must connect");
-                else
-                    onConnect(command[2]);
-            }
 
             // infinity loop for user input,after connect command until disconnect command
             while (connect) {
@@ -77,6 +68,19 @@ import java.util.concurrent.atomic.AtomicBoolean;
         /**
          * Auxiliary methods
          **/
+
+        public static void logInAction() {
+            String userInput;
+            String[] command;
+            while (!connect) {
+                userInput = scanner.nextLine();
+                command = userInput.split("\\s+");
+                if (command.length != 3 || !command[0].equals("/user") || !command[1].equals("connect"))
+                    System.out.println("Before any chat activity, you must connect");
+                else
+                    onConnect(command[2]);
+            }
+        }
 
         private static void getInviteAnswer(String[] command) {
             if (command.length != 1) {
@@ -301,7 +305,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
                 return;
             }
 
-            final Timeout userTimeout = Timeout.create(Duration.ofSeconds(60)); //give user 1 minute to answer
+            final Timeout userTimeout = Timeout.create(Duration.ofSeconds(Constants.MINUTE)); //give user 1 minute to answer
             Future<Object> rt = Patterns.ask(targetActor, new GroupInviteRequestReply(groupName, Constants.GROUP_INVITE_PROMPT(groupName)), userTimeout);
             try {
                 Object result = Await.result(rt, userTimeout.duration());

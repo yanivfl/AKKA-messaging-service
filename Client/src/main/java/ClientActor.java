@@ -12,7 +12,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public class ClientActor extends AbstractActor {
     private final ActorRef myActorRef = this.self();
-    private LoggingAdapter logger = Logging.getLogger(getContext().system(), this);
+    private LoggingAdapter logger = Logging.getLogger(getContext().system(), this); //TODO: delete?
     private AtomicBoolean isInviteAnswer;
     private AtomicBoolean expectingInviteAnswer;
     private Object waitingObject;
@@ -22,7 +22,6 @@ public class ClientActor extends AbstractActor {
         this.waitingObject = waitingObject;
         this.expectingInviteAnswer = expectingInviteAnswer;
     }
-
 
     static Props props(AtomicBoolean isInviteAnswer, AtomicBoolean expectingInviteAnswer, Object waitingObject) {
         return Props.create(ClientActor.class, () -> new ClientActor(isInviteAnswer, expectingInviteAnswer, waitingObject));
@@ -53,9 +52,7 @@ public class ClientActor extends AbstractActor {
         System.out.println(textMsg.text);
     }
 
-    private void onErrorMessage(ErrorMessage errorMsg) {
-        System.out.println(errorMsg.error);
-    }
+    private void onErrorMessage(ErrorMessage errorMsg) { System.out.println(errorMsg.error); }
 
     private void onGroupInviteRequestReply(GroupInviteRequestReply reqMsg) {
         System.out.println(reqMsg.text);
