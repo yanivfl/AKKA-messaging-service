@@ -1,12 +1,6 @@
 package Groups;
 
-
 import akka.actor.ActorRef;
-import akka.routing.ActorRefRoutee;
-import akka.routing.RoundRobinRoutingLogic;
-import akka.routing.Routee;
-import akka.routing.Router;
-
 import java.util.LinkedList;
 import java.util.List;
 
@@ -33,17 +27,15 @@ public class GroupInfo {
 
     public String getGroupName() { return groupName; }
 
-    public void setGroupName(String groupName) { this.groupName = groupName; }
-
     public boolean isAdmin(String username) { return admin.equals(username); }
 
     public boolean isMuted(String username) { return mutedusers.contains(username); }
 
-    public List<String> getCoAdmins() { return coAdmins; }
-
     public List<String> getMuteds() { return mutedusers; }
 
     public List<String> getUsers() { return users; }
+
+    public GroupRouter getGroupRouter() { return groupRouter; }
 
     public List<String> getAllUsers() {
         List<String> allUsers = new LinkedList<>();
@@ -54,8 +46,6 @@ public class GroupInfo {
         allUsers.addAll(users);
         return allUsers;
     }
-
-    public GroupRouter getGroupRouter() { return groupRouter; }
 
     public boolean userHasPrivileges(String username){
         return admin.equals(username) || coAdmins.contains(username);
@@ -119,7 +109,4 @@ public class GroupInfo {
                 '}';
     }
 }
-
-//    List<String> paths = Arrays.asList("/user/workers/w1", "/user/workers/w2", "/user/workers/w3");
-//    ActorRef router4 = getContext().actorOf(new RoundRobinGroup(paths).props(), "router4");
 

@@ -7,14 +7,11 @@ import akka.event.Logging;
 import akka.event.LoggingAdapter;
 
 import java.io.*;
-import java.nio.file.Paths;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 
 public class ClientActor extends AbstractActor {
-    private String clientUserName = "";
     private final ActorRef myActorRef = this.self();
-    public final ActorSelection manager = getContext().actorSelection(Constants.PATH_TO_MANAGER);
     private LoggingAdapter logger = Logging.getLogger(getContext().system(), this);
     private AtomicBoolean isInviteAnswer;
     private AtomicBoolean expectingInviteAnswer;

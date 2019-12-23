@@ -238,7 +238,7 @@ public class Manager extends AbstractActor {
         getSender().tell(new AddressMessage(targetActor), ActorRef.noSender());
         logger.info(group.toString());
         Timer timer = new Timer();
-        //Scheduling NextTask() call in 10 second.
+        //Scheduling unMutedAutomatically() call in timeInMute second.
         timer.schedule(new unMutedAutomatically(group,targetUserName,targetActor), timeInMute * 1000);
 
 
@@ -260,8 +260,7 @@ public class Manager extends AbstractActor {
         ActorRef targetActor = usersMap.get(targetUserName).getActor();
         group.unMuteUser(targetUserName);
         group.getGroupRouter().addRoutee(targetActor); // for getting broadcast
-        targetActor.tell(new TextMessage(Constants.GROUP_UN_MUTE(groupName, sourceUserName)), ActorRef.noSender()); //TODO:sent by client, not server
-
+        getSender().tell(new AddressMessage(targetActor), ActorRef.noSender());
     }
 
     private void onGroupCoAdminAddMessage(GroupCoAdminAddMessage CoadminAddMsg) {
