@@ -77,7 +77,8 @@ this is because when a client wants to broadcast a message, he should not be one
 #### SharedMessages:
 ##### Messages:
 all comminacation between actors in our project is done by Messages,
-they are all Serializable and have final fields.
+they are all Serializable and have final fields. this gives us a unique way of recieving messages,
+using the CreateRecieve function, upon recieving a certain message class, it will go to the correct function and all the required fields will be in the message.
 
 #### Users:
 ##### UserInfo:
