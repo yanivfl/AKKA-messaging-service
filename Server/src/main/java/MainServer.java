@@ -18,7 +18,7 @@ public class MainServer {
         // Create an MANAGER actor
         system.actorOf(Props.create(Manager.class), Constants.MANAGER);
 
-        System.out.println("ENTER to terminate");
+        System.out.println("ENTER to terminate ");
         try(BufferedReader in = new BufferedReader(new InputStreamReader(System.in))) {
             in.readLine();
         } catch (IOException ex) {
