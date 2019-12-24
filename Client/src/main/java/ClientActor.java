@@ -11,6 +11,8 @@ public class ClientActor extends AbstractActor {
     private AtomicBoolean isInviteAnswer;
     private AtomicBoolean expectingInviteAnswer;
     private final Object waitingObject;
+    public static final String ANSI_RESET = "\u001B[0m";
+    public static final String ANSI_RED = "\u001B[31m";
 
     public ClientActor(AtomicBoolean isInviteAnswer, AtomicBoolean expectingInviteAnswer, Object waitingObject) {
         this.isInviteAnswer = isInviteAnswer;
@@ -26,14 +28,18 @@ public class ClientActor extends AbstractActor {
     public Receive createReceive() {
         return receiveBuilder()
                 .match(TextMessage.class, this::onTextMessage)
-                .match(AllBytesFileMessage.class, this::AllBytesFileMessage)
+                .match(AllBytesFileMessage.class, this::onAllBytesFileMessage)
                 .match(ErrorMessage.class, this::onErrorMessage)
                 .match(GroupInviteRequestReplyMessage.class, this::onGroupInviteRequestReplyMessage)
                 .build();
     }
 
-
-    private void AllBytesFileMessage(AllBytesFileMessage abfileMsg) {
+    /**
+     * on recieving a file message.
+     * user saves the file, prints recieved message
+     * @param abfileMsg
+     */
+    private void onAllBytesFileMessage(AllBytesFileMessage abfileMsg) {
         String outputFile = SharedFucntions.getTargetFilePath(abfileMsg.userName,abfileMsg.fileName);
         try (FileOutputStream stream = new FileOutputStream(outputFile)) {
             stream.write(abfileMsg.buffer);
@@ -43,11 +49,21 @@ public class ClientActor extends AbstractActor {
         }
     }
 
+    /**
+     * on recieving text message, prints it
+     * @param textMsg
+     */
     private void onTextMessage(TextMessage textMsg) {
         System.out.println(textMsg.text);
     }
 
-    private void onErrorMessage(ErrorMessage errorMsg) { System.out.println(errorMsg.error); }
+    /**
+     * on recievin error message, prints it
+     * @param errorMsg
+     */
+    private void onErrorMessage(ErrorMessage errorMsg) {
+        System.out.println(ANSI_RED+ errorMsg.error+ ANSI_RESET);
+    }
 
     private void onGroupInviteRequestReplyMessage(GroupInviteRequestReplyMessage reqMsg) {
         System.out.println(reqMsg.text);

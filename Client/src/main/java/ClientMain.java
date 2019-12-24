@@ -25,18 +25,16 @@ import java.util.concurrent.atomic.AtomicBoolean;
         private static boolean connect = false;
         private static String clientUserName = "";
         private static final Timeout timeout = Timeout.create(Duration.ofSeconds(2));
-        private static AtomicBoolean isInviteAnswer = new AtomicBoolean(false);
-        private static AtomicBoolean expectingInviteAnswer = new AtomicBoolean(false);
+        private static AtomicBoolean isInviteAnswer = new AtomicBoolean(false); //client ansew from keyboard
+        private static AtomicBoolean expectingInviteAnswer = new AtomicBoolean(false); //expecting yes or no from keyboard
         private static final Object waitingObject = new Object();
+        public static final String ANSI_RESET = "\u001B[0m";
+        public static final String ANSI_RED = "\u001B[31m";
 
 
         public static void main(String[] args) {
-
-
-
             while(true){
                 try{
-
                     disconnectedActions(); // verify that a connect command happen before any other command
                     connectedActions(); // infinity loop for user input,after connect command until disconnect command
                 } catch (Exception e){
@@ -44,11 +42,13 @@ import java.util.concurrent.atomic.AtomicBoolean;
                     break;
                 }
             }
-            // When received a disconnect command, the connection with the server is closed
             scanner.close();
             system.terminate();
         }
 
+        /**
+         * handles actions while user is connected
+         */
         private static void connectedActions() {
             String userInput;
             String[] command;
@@ -75,10 +75,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
         }
 
         /**
-         * Auxiliary methods
-         **/
-
-        public static void disconnectedActions() {
+         * handles action while user is disconnected
+         */
+        private static void disconnectedActions() {
             String userInput;
             String[] command;
             while (!connect) {
@@ -91,6 +90,12 @@ import java.util.concurrent.atomic.AtomicBoolean;
             }
         }
 
+        /**
+         * get answer from user regarding group invitationץ
+         * sets AtomicBoolean according to answer.
+         * wakes up actor to handle answer
+         * @param command
+         */
         private static void getInviteAnswer(String[] command) {
             if (command.length != 1) {
                 System.out.println("Answer must be \"yes\" or \"no\" (more than 1 word)");
@@ -117,6 +122,11 @@ import java.util.concurrent.atomic.AtomicBoolean;
             }
         }
 
+        /**
+         * handles /user ...commands
+         * @param command
+         */
+
         private static void userCommandSwitch(String[] command) {
 
             switch (command[1]) { // /user disconnect
@@ -138,6 +148,11 @@ import java.util.concurrent.atomic.AtomicBoolean;
             }
             System.out.println("The User feature you requested does not exist, please try again");
         }
+
+        /**
+         * handles /group ....commands
+         * @param command
+         */
 
         private static void groupCommandSwitch(String[] command) {
             switch (command[1]) {
@@ -165,22 +180,31 @@ import java.util.concurrent.atomic.AtomicBoolean;
             System.out.println("The Group feature you requested does not exist, please try again");
         }
 
+        /**
+         * handles /group send ...commands
+         * @param command
+         */
         private static void groupSendCommandSwitch(String[] command) {
             switch (command[2]) {
                 case "text":
                     if (command.length >= 5) {
-                        groupSendText(command[3], extractMsg(command, 4));
+                        onGroupSendText(command[3], extractMsg(command, 4));
                         return;
                     }
                 case "file":
                     if (command.length == 5) {
-                        groupSendFile(command[3], command[4]);
+                        onGroupSendFile(command[3], command[4]);
                         return;
                     }
             }
             System.out.println("The Group send feature you requested does not exist, please try again");
         }
 
+
+        /**
+         * handles /group user ...commands
+         * @param command
+         */
         private static void groupUserCommandSwitch(String[] command) {
             switch (command[2]) {
                 case "invite":
@@ -207,6 +231,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
             System.out.println("The Group user feature you requested does not exist, please try again");
         }
 
+        /**
+         * handles /group coadmin ...commands
+         * @param command
+         */
         private static void coAdminCommandSwitch(String[] command) {
             switch (command[2]) {
                 case "add":
@@ -224,6 +252,12 @@ import java.util.concurrent.atomic.AtomicBoolean;
             }
         }
 
+        /**
+         * creates string, starting at indexMessage untill end of command array
+         * @param command
+         * @param indexMessage
+         * @return String
+         */
         private static String extractMsg(String[] command, int indexMessage) {
             String[] temp = Arrays.copyOfRange(command, indexMessage, command.length);
             String msg = Arrays.toString(temp);
@@ -231,6 +265,16 @@ import java.util.concurrent.atomic.AtomicBoolean;
             return msg;
         }
 
+
+
+        /***************************** SERVER/USER REQUESTS ***********************/
+
+        /**
+         * ask server is username doesn't exist.
+         * if true -> connects user and prints text message
+         * if false -> prints error message
+         * @param username
+         */
         private static void onConnect(String username) {
             /**
              * Connecting a user to the server - clientActor send Ask message to manager to connect
@@ -245,7 +289,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
                     connect = true;
                     System.out.println(((TextMessage) result).text);
                 } else
-                    System.out.println(((ErrorMessage) result).error);
+                    System.out.println(ANSI_RED + ((ErrorMessage) result).error + ANSI_RESET);
 
             } catch (Exception e) {
                 e.printStackTrace();
@@ -253,6 +297,12 @@ import java.util.concurrent.atomic.AtomicBoolean;
             }
         }
 
+        /**
+         * ask server is username exists.
+         * if true -> disconnects user and prints text message
+         * if false -> prints error message
+         * kills with poison pill clientRef
+         */
         private static void onDisconnect() {
             /**
              * Disconnecting a user from the server - clientActor send Ask message to manager to disconnect
@@ -265,7 +315,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
                     clientRef.tell(PoisonPill.getInstance(), ActorRef.noSender());
                     System.out.println(((TextMessage) result).text);
                 } else
-                    System.out.println(((ErrorMessage) result).error);
+                    System.out.println(ANSI_RED + ((ErrorMessage) result).error + ANSI_RESET);
 
             } catch (Exception e) {
                 e.printStackTrace();
@@ -273,12 +323,27 @@ import java.util.concurrent.atomic.AtomicBoolean;
             }
         }
 
+
+        /**
+         * validate with server
+         * if true -> user sends message to target
+         * if false -> prints error message
+         * @param targetName
+         * @param msg
+         */
         private static void onChatTextualMessage(String targetName, String msg) {
             ActorRef targetActor = ServerRequest(new validateUserSendMessage(targetName));
             if (targetActor != null)
                 targetActor.tell(new TextMessage(Constants.PRINTING(Constants.ACTION_USER, clientUserName, msg)), clientRef);
         }
 
+        /**
+         * validate with server and that file exists
+         * if true -> user sends file to target
+         * if false -> prints error message
+         * @param targetName
+         * @param filePath
+         */
         private static void onChatBinaryMessage(String targetName, String filePath) {
             if (!isFileExists(filePath)) return;
             ActorRef targetActor = ServerRequest(new validateUserSendMessage(targetName)); //prints error message inside
@@ -294,14 +359,29 @@ import java.util.concurrent.atomic.AtomicBoolean;
             }
         }
 
+        /**
+         * sends server group create request
+         * @param groupName
+         */
         private static void onGroupCreate(String groupName) {
             manager.tell(new GroupCreateMessage(groupName, clientUserName), clientRef);
         }
 
+        /**
+         * sends server group leave request
+         * @param groupName
+         */
         private static void onGroupLeave(String groupName) {
             manager.tell(new GroupLeaveMessage(groupName, clientUserName), clientRef);
         }
 
+        /**
+         * validates with server
+         * invites target to group with ask request
+         * sends server request to add target to group iff targets answer was positive
+         * @param groupName
+         * @param targetUserName
+         */
         private static void onGroupInvite(String groupName, String targetUserName) {
             ActorRef targetActor = ServerRequest(new validateGroupInvite(groupName, clientUserName, targetUserName));
             if (targetActor == null) { return;  }
@@ -321,7 +401,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
                                     targetActor.tell(new TextMessage(Constants.GROUP_WELCOME_PROMPT(groupName)), clientRef);
                                 }
                             } else{
-                                System.out.println(((ErrorMessage) result).error);
+                                System.out.println(ANSI_RED + ((ErrorMessage) result).error + ANSI_RESET);
                             }
                         } catch (Exception e) {
                             e.printStackTrace();
@@ -330,7 +410,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
                     }
                     System.out.println(Constants.GROUP_RESPOND_TO_SOURCE(targetUserName, answer));
                 } else{
-                    System.out.println(((ErrorMessage) resultInvite).error);
+                    System.out.println(ANSI_RED + ((ErrorMessage) resultInvite).error + ANSI_RESET);
                 }
             } catch (Exception e) {
                 e.printStackTrace();
@@ -338,7 +418,13 @@ import java.util.concurrent.atomic.AtomicBoolean;
             }
         }
 
-        private static void groupSendText(String groupName, String msg) {
+        /**
+         * validate with server.
+         * broadcast text message to group
+         * @param groupName
+         * @param msg
+         */
+        private static void onGroupSendText(String groupName, String msg) {
             ActorRef broadcastRouter = ServerRequest(new validateGroupSendMessage(groupName, clientUserName));
             if (broadcastRouter == null) { return; }
             broadcastRouter.tell(new Broadcast(new TextMessage(
@@ -346,7 +432,13 @@ import java.util.concurrent.atomic.AtomicBoolean;
             broadcastRouter.tell(PoisonPill.getInstance(), ActorRef.noSender());
         }
 
-        private static void groupSendFile(String groupName, String filePath) {
+        /**
+         * validate with server and if file exists
+         * broadcast file message to group
+         * @param groupName
+         * @param filePath
+         */
+        private static void onGroupSendFile(String groupName, String filePath) {
             if (!isFileExists(filePath)) return;
             ActorRef broadcastRouter = ServerRequest(new validateGroupSendMessage(groupName, clientUserName));
             if (broadcastRouter == null) { return; }
@@ -362,6 +454,13 @@ import java.util.concurrent.atomic.AtomicBoolean;
             }
         }
 
+        /**
+         * sends remove request to server.
+         * server removes target.
+         * user sends remove message to target.
+         * @param groupName
+         * @param targetUserName
+         */
         private static void onGroupRemove(String groupName, String targetUserName){
             Future<Object> rt = Patterns.ask(manager, new GroupRemoveMessage(groupName, clientUserName, targetUserName), timeout);
             try {
@@ -372,7 +471,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
                             Constants.GROUP_REMOVE_PROMPT(groupName, clientUserName)
                     )), clientRef);
                 } else{
-                    System.out.println(((ErrorMessage) result).error);
+                    System.out.println(ANSI_RED + ((ErrorMessage) result).error + ANSI_RESET);
                 }
             } catch (Exception e) {
                 e.printStackTrace();
@@ -380,6 +479,14 @@ import java.util.concurrent.atomic.AtomicBoolean;
             }
         }
 
+        /**
+         * sends mute request to server.
+         * server mutes target.
+         * user sends mute message to target.
+         * @param groupName
+         * @param targetUserName
+         * @param timeInSeconds
+         */
         private static void onGroupMute(String groupName, String targetUserName, String timeInSeconds){
             Future<Object> rt = Patterns.ask(manager, new GroupMuteMessage(groupName, clientUserName, targetUserName, timeInSeconds), timeout);
             try {
@@ -390,7 +497,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
                             Constants.GROUP_MUTE(groupName, timeInSeconds,clientUserName)
                     )), clientRef);
                 } else{
-                    System.out.println(((ErrorMessage) result).error);
+                    System.out.println(ANSI_RED + ((ErrorMessage) result).error + ANSI_RESET);
                 }
             } catch (Exception e) {
                 e.printStackTrace();
@@ -398,6 +505,13 @@ import java.util.concurrent.atomic.AtomicBoolean;
             }
         }
 
+        /**
+         * sends unmute request to server.
+         * server unmutes target.
+         * user sends unmute message to target.
+         * @param groupName
+         * @param targetUserName
+         */
         private static void onGroupUnMute(String groupName, String targetUserName){
             Future<Object> rt = Patterns.ask(manager, new GroupUnMuteMessage(groupName, clientUserName, targetUserName), timeout);
             try {
@@ -408,7 +522,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
                             Constants.GROUP_UN_MUTE(groupName,clientUserName)
                     )), clientRef);
                 } else{
-                    System.out.println(((ErrorMessage) result).error);
+                    System.out.println(ANSI_RED + ((ErrorMessage) result).error + ANSI_RESET);
                 }
             } catch (Exception e) {
                 e.printStackTrace();
@@ -416,14 +530,29 @@ import java.util.concurrent.atomic.AtomicBoolean;
             }
         }
 
+        /**
+         * sends coadmin add request to server
+         * @param groupName
+         * @param targetUserName
+         */
         private static void onCoAdminAdd(String groupName, String targetUserName){
             manager.tell(new GroupCoAdminAddMessage(groupName, clientUserName, targetUserName), clientRef);
         }
 
+        /**
+         * sends remove coadmin request to server
+         * @param groupName
+         * @param targetUserName
+         */
         private static void onCoAdminRemove(String groupName, String targetUserName){
             manager.tell(new GroupCoAdminRemoveMessage(groupName, clientUserName, targetUserName), clientRef);
         }
 
+        /**
+         * general server request.
+         * @param message
+         * @return ActorRef - can be broadcast actor or target actor
+         */
         private static ActorRef ServerRequest (Messages message){
             Future<Object> rt = Patterns.ask(manager, message, timeout);
             try {
@@ -431,7 +560,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
                 if (result.getClass() == AddressMessage.class)
                     return ((AddressMessage) result).targetActor;
                 else
-                    System.out.println(((ErrorMessage) result).error);
+                    System.out.println(ANSI_RED + ((ErrorMessage) result).error + ANSI_RESET);
             } catch (Exception e) {
                 e.printStackTrace();
                 System.out.println(Constants.SERVER_IS_OFFLINE_CONN);
@@ -439,7 +568,11 @@ import java.util.concurrent.atomic.AtomicBoolean;
             return null;
         }
 
-
+        /**
+         * checks if file exists
+         * @param filePath
+         * @return true iff file exists
+         */
         private static boolean isFileExists(String filePath) {
             File file = new File(filePath);
             if (!file.exists() || file.isDirectory()) {
