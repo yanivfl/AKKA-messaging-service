@@ -39,6 +39,7 @@ public class Constants{
     public static String GROUP_UN_MUTE(String groupName, String sourceName){return  "You have been unmuted in " +groupName+" by " +sourceName+"!";}
     public static String GROUP_NOT_BELONG(String groupName){return "You are not part of " + groupName + "!";}
     public static String GROUP_NOT_HAVE_PREVILEDGES(String groupName){return "You are neither an admin nor a co-admin of " + groupName + "!";}
+    public static String GROUP_NOT_HAVE_ADMIN_PREVILEDGES(String groupName){return "You are not an admin of " + groupName + "!";}
     public static String GROUP_ALREADY_HAVE_PREVILEDGES(String groupName, String username){return username+ " already have an admin or a co-admin privileges in " + groupName + "!";}
     public static String GROUP_TARGET_ALREADY_BELONGS(String targetUserName, String groupName){return targetUserName+ " is already in " + groupName + "!";}
     public static String GROUP_RESPOND_TO_SOURCE(String username, String answer){return username+ " responded to group invite with the following answer: " + answer;}

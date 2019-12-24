@@ -16,7 +16,6 @@ import java.util.concurrent.ConcurrentMap;
 
 //for mute action
 import java.util.Timer;
-import java.util.TimerTask;
 
 public class Manager extends AbstractActor {
 
@@ -242,12 +241,15 @@ public class Manager extends AbstractActor {
         if (!ValidateIsGroupContainsUser(group, targetUserName, true)) return;
         if (ValidateIsUserAdmin(group, targetUserName, false)) return;
 
+        // if targetUserName is co-admin pre-conditions
+        if(group.getUserGroupMode(targetUserName) == GroupInfo.groupMode.CO_ADMIN)
+            if (!ValidateIsUserAdmin(group, sourceUserName, true)) return;
+
+
         //pre-conditions checked!
         logger.info(targetUserName + " will be muted in the "+ groupName+ "for "+ timeInMute + " seconds");
-        //TODO move fucntionality to muteUser
         ActorRef targetActor = usersMap.get(targetUserName).getActor();
-        group.muteUser(targetUserName);
-        group.getGroupRouter().removeRoutee(targetActor); //for not getting broadcast
+        group.muteUser(targetUserName, targetActor);
         getSender().tell(new AddressMessage(targetActor), ActorRef.noSender());
         logger.info(group.toString());
 
@@ -271,33 +273,32 @@ public class Manager extends AbstractActor {
 
         // pre-conditions checked!
         ActorRef targetActor = usersMap.get(targetUserName).getActor();
-        //TODO move fucntionality to unMuteUser
-        group.unMuteUser(targetUserName);
-        group.getGroupRouter().addRoutee(targetActor); // for getting broadcast
+        group.unMuteUser(targetUserName, targetActor);
         getSender().tell(new AddressMessage(targetActor), ActorRef.noSender());
     }
 
-    private void onGroupCoAdminAddMessage(GroupCoAdminAddMessage CoadminAddMsg) {
+    private void onGroupCoAdminAddMessage(GroupCoAdminAddMessage CoAdminAddMsg) {
         logger.info("Got a Coadmin add Message");
-        String groupName = CoadminAddMsg.groupName;
-        String sourceUserName = CoadminAddMsg.sourceUserName;
-        String targetUserName = CoadminAddMsg.targetUserName;
+        String groupName = CoAdminAddMsg.groupName;
+        String sourceUserName = CoAdminAddMsg.sourceUserName;
+        String targetUserName = CoAdminAddMsg.targetUserName;
         GroupInfo group = groupsMap.get(groupName); //returns null if doesn't exist. we will leave function in validator
 
         // check all pre-conditions
         if (!ValidateIsGroupExist(groupName, true)) return;
         if (!ValidateIsUserExist(targetUserName, true)) return;
-        if (!ValidateUserHasPriviledges(group, sourceUserName, true)) return;
+        if (!ValidateIsUserAdmin(group, sourceUserName, true)) return; // only admin can promote user to co-admin
         // extra pre-conditions
         if (!ValidateIsGroupContainsUser(group, targetUserName, true)) return;
-        if (ValidateUserHasPriviledges(group, targetUserName, false)) return;
+        if (ValidateIsUserAdmin(group, targetUserName, false)) return; // admin can`t promote to co-admin
+
 
         //pre-conditions checked!
         logger.info(targetUserName + " will be be added to the "+ groupName +" co-admin list");
         String msg = "You have been promoted to co-admin in " + groupName + "!";
         ActorRef targetActor = usersMap.get(targetUserName).getActor();
         ActorRef sourceActor = usersMap.get(sourceUserName).getActor();
-        group.promoteToCoAdmin(targetUserName);
+        group.promoteToCoAdmin(targetUserName,targetActor);
         targetActor.tell(new TextMessage(msg), sourceActor);
         logger.info(group.toString());
 
@@ -313,7 +314,7 @@ public class Manager extends AbstractActor {
         // check all pre-conditions
         if (!ValidateIsGroupExist(groupName, true)) return;
         if (!ValidateIsUserExist(targetUserName, true)) return;
-        if (!ValidateUserHasPriviledges(group, sourceUserName, true)) return;
+        if (!ValidateIsUserAdmin(group, sourceUserName, true)) return; // only admin can demote co-admin to user
         // extra pre-conditions
         if (!ValidateIsGroupContainsUser(group, targetUserName, true)) return;
         if (ValidateIsUserAdmin(group, targetUserName, false)) return;
@@ -349,7 +350,7 @@ public class Manager extends AbstractActor {
 
 
 
-//****************************Validators********************************** //TODO new file
+//****************************Validators**********************************//
 
     private boolean ValidateIsGroupUserMuted(GroupInfo group,String userName, boolean expectedPrivilege){
         boolean isMuted = group.isMuted(userName);
@@ -368,7 +369,8 @@ public class Manager extends AbstractActor {
     private boolean ValidateIsUserAdmin(GroupInfo group,String userName, boolean expectedPrivilege) {
         boolean isAdmin = group.isAdmin(userName);
         if(!isAdmin && expectedPrivilege){
-            logger.info("No Worries Bro");
+            logger.info(Constants.GROUP_NOT_HAVE_ADMIN_PREVILEDGES(group.getGroupName()));
+            getSender().tell(new ErrorMessage(Constants.GROUP_NOT_HAVE_ADMIN_PREVILEDGES(group.getGroupName())), ActorRef.noSender());
         }
         if(isAdmin && !expectedPrivilege){
             logger.info(Constants.GROUP_ACTION_ON_ADMIN(group.getGroupName(),userName));
@@ -428,31 +430,6 @@ public class Manager extends AbstractActor {
             getSender().tell(new ErrorMessage(Constants.NOT_EXIST(userName)), ActorRef.noSender());
         }
         return isExist;
-    }
-
-    class unMutedAutomatically extends TimerTask { //TODO new file
-
-        private final Timer timer;
-        private GroupInfo group;
-        private ActorRef targetActor;
-        private String targetUserName;
-
-        private unMutedAutomatically(GroupInfo group, String targetUserName, ActorRef targetActor, Timer timer) {
-            this.group = group;
-            this.targetUserName = targetUserName;
-            this.targetActor = targetActor;
-            this.timer = timer;
-        }
-
-        @Override
-        public void run() {
-            logger.info("Terminated the Timer Thread!");
-            if (group.getMuteds().contains(targetUserName))
-                group.unMuteUser(targetUserName);
-                group.getGroupRouter().addRoutee(targetActor); // for getting broadcast
-                targetActor.tell(new TextMessage(Constants.GROUP_UN_MUTE_AUTO), ActorRef.noSender());
-            timer.cancel(); // Terminate the thread
-        }
     }
 
 }
