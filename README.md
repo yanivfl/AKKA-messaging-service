@@ -7,14 +7,6 @@ Assignment 2
 
 **all functions are documented.
 
-TODOS:
-1. README - containing the names and ids of the group.
-It will also contain the design of the Actor Model you’ve implemented using Akka,
-the different actors, hierarchy, implemented behaviors,
-and kinds of messages passed and their effect on behavior.
-
-
-
 ## Client
 ClientMain.java is the system actor.
 this class reads the keyboard input and sends messages to the manager actor and to other 
