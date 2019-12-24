@@ -25,7 +25,7 @@ public class GroupInfo {
     }
 
     public enum groupMode {
-        ADMIN, CO_ADMIN, MUTED, USER, NONE;
+        ADMIN, CO_ADMIN, MUTED, USER, NONE
     }
 
     public String getGroupName() { return groupName; }
