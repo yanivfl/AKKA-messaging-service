@@ -34,11 +34,10 @@ public class GroupInfo {
 
     public boolean isMuted(String username) { return mutedusers.contains(username); }
 
-    public List<String> getMuteds() { return mutedusers; }
-
     public List<String> getUsers() { return users; }
 
     public GroupRouter getGroupRouter() { return groupRouter; }
+
 
     private List<String> concatList(List<String> list1, List<String> list2){
         return Stream.concat(list1.stream(), list2.stream())
@@ -67,21 +66,24 @@ public class GroupInfo {
                 groupMode.NONE;
     }
 
-    public void muteUser(String username){ //TODO do all mute functionality
+    public void muteUser(String username, ActorRef targetActor){
+        getGroupRouter().removeRoutee(targetActor); //for not getting broadcast
         removeUsername(username);
         mutedusers.add(username);
     }
-    //TODO do all mute functionality
-    public void unMuteUser(String username){
+    public void unMuteUser(String username, ActorRef targetActor){
         mutedusers.remove(username);
+        getGroupRouter().addRoutee(targetActor); // for getting broadcast
         users.add(username);
     }
-    //TODO fix promote muted-> user -> co admin (use mute functionality!)
-    public void promoteToCoAdmin(String username){
+    public void promoteToCoAdmin(String username, ActorRef user){
+        if(mutedusers.contains(username))
+            unMuteUser(username, user);
+
         removeUsername(username);
         coAdmins.add(username);
     }
-    //TODO fix promote co-admin-> user -> muted (use unMute functionality!)
+
     public void demoteCoAdmin(String username){
         users.add(username);
         coAdmins.remove(username);
