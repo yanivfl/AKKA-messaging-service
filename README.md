@@ -8,13 +8,11 @@ Assignment 2
 **all functions are documented.
 
 TODOS:
-0. we must write that group leave messages, we understood that broadcast will be done as well
-(same as above, in addition:)
 1. README - containing the names and ids of the group.
 It will also contain the design of the Actor Model you’ve implemented using Akka,
 the different actors, hierarchy, implemented behaviors,
 and kinds of messages passed and their effect on behavior.
-Be sure to detail it to the fullest!
+
 
 
 ## Client
@@ -52,7 +50,6 @@ the manager handles the following information:
 1. UsersMap, maps user name to User Info (explaind in utils)
 2. groupsMap, maps group name to Group Info (explaind in utils)
 
-
 ##### unMutedAutomatically
 this is a timer, once user has been muted, the timer is activated.
 once time expires, if user is still muted, he will be moved back to user.
@@ -82,9 +79,17 @@ this is because when a client wants to broadcast a message, he should not be one
 all comminacation between actors in our project is done by Messages,
 they are all Serializable and have final fields.
 
+#### Users:
+##### UserInfo:
+for every user, the manager saves a UserInfo containing the following information:
+1.  List<String> groups: list of groups user is in.
+2.  ActorRef actor: ActorRef of this user.
 
-
-
+##### Additional Information:
+ on request /group leave <groupname>, it is writtin: "same as above"...
+we understood this as also to broadcast the same message.
+this is why, the onGroupLeaveMessage(GroupLeaveMessage leaveMsg) is implemented using switch case, and ADMIN will broadcast admin, coadmin and user message. coadmin will broadcast coadmon and user message. user will broadcast user message.
+this is what we understood that is requested, to change this is easy and requires an if statement in every case.
 
 ## How to run
 
