@@ -38,12 +38,21 @@ public class GroupInfo {
 
     public GroupRouter getGroupRouter() { return groupRouter; }
 
-
+    /**
+     * concats 2 lists
+     * @param list1
+     * @param list2
+     * @return new list
+     */
     private List<String> concatList(List<String> list1, List<String> list2){
         return Stream.concat(list1.stream(), list2.stream())
                 .collect(Collectors.toList());
     }
 
+    /**
+     * gets all the users in this group
+     * @return list<String>, users in group
+     */
     public List<String> getAllUsers() {
         List<String> adminList = admin.equals("")?
                 Collections.emptyList() :
@@ -54,10 +63,20 @@ public class GroupInfo {
         );
     }
 
+    /**
+     *
+     * @param username
+     * @return true iff user has privilege
+     */
     public boolean userHasPrivileges(String username){
         return admin.equals(username) || coAdmins.contains(username);
     }
 
+    /**
+     * get user mode
+     * @param username
+     * @return user mode
+     */
     public groupMode getUserGroupMode(String username){
         return  admin.equals(username)? groupMode.ADMIN:
                 coAdmins.contains(username)? groupMode.CO_ADMIN:
@@ -66,16 +85,32 @@ public class GroupInfo {
                 groupMode.NONE;
     }
 
+    /**
+     * mute user
+     * @param username
+     * @param targetActor
+     */
     public void muteUser(String username, ActorRef targetActor){
         getGroupRouter().removeRoutee(targetActor); //for not getting broadcast
         removeUsername(username);
         mutedusers.add(username);
     }
+    /**
+     * un mute user
+     * @param username
+     * @param targetActor
+     */
     public void unMuteUser(String username, ActorRef targetActor){
         mutedusers.remove(username);
         getGroupRouter().addRoutee(targetActor); // for getting broadcast
         users.add(username);
     }
+
+    /**
+     * promote user/muted user to coadmin
+     * @param username
+     * @param user
+     */
     public void promoteToCoAdmin(String username, ActorRef user){
         if(mutedusers.contains(username))
             unMuteUser(username, user);
@@ -84,6 +119,10 @@ public class GroupInfo {
         coAdmins.add(username);
     }
 
+    /**
+     * move user to user
+     * @param username
+     */
     public void demoteCoAdmin(String username){
         users.add(username);
         coAdmins.remove(username);
@@ -97,6 +136,11 @@ public class GroupInfo {
         return false;
     }
 
+    /**
+     * remove user from list he is contained in
+     * @param username
+     * @return
+     */
     public boolean removeUsername(String username){
         groupMode type = getUserGroupMode(username);
         return  type.equals(groupMode.CO_ADMIN)? coAdmins.remove(username) :

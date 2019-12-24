@@ -3,6 +3,9 @@ package SharedMessages;
 import akka.actor.ActorRef;
 import java.io.Serializable;
 
+/**
+ * messages actors communicate with
+ */
 public class Messages implements Serializable {
 
 

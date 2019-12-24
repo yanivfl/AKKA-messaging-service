@@ -14,11 +14,6 @@ public class GroupRouter {
 
     private List<String> paths = new LinkedList<>();
 
-
-    public GroupRouter(){
-//        router = new Router(new RoundRobinRoutingLogic(), routees);
-    }
-
     public void addRoutee(ActorRef routee){
         paths.add(routee.path().toString());
     }
@@ -27,6 +22,15 @@ public class GroupRouter {
         paths.remove(routee.path().toString());
     }
 
+    /**
+     * removes source user from router so he won't get broadcasted message.
+     * creates unique id for clientref
+     * create broadcast router from paths in group
+     * add back user
+     * @param context
+     * @param sourceRoutee
+     * @return broadcast router as clientRef
+     */
     public ActorRef getBroadcastRouter(ActorCell context, ActorRef sourceRoutee ){
         removeRoutee(sourceRoutee);
         UUID uuid = Generators.timeBasedGenerator().generate();

@@ -21,6 +21,9 @@ class unMutedAutomatically extends TimerTask {
     }
 
     @Override
+    /**
+     * create timer for muted user. once timer ends muted user goes back to user
+     */
     public void run() {
         System.out.println("Terminated the Timer Thread!");
         if (group.getUserGroupMode(targetUserName) == GroupInfo.groupMode.MUTED) {

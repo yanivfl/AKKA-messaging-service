@@ -4,7 +4,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 
 public class Constants{
-    public static final int MINUTE = 60; // 4KB=BUFFER_SIZE
+    public static final int MINUTE = 60;
     public static final String ACTION_USER = "user";
     public static final String CHAT_DOWNLOADS_DIR = "Chat_Downloads";
     public static final String MANAGER = "Manager";
@@ -14,12 +14,10 @@ public class Constants{
     public static final String PATH_TO_MANAGER = "akka.tcp://"+ SERVER + "@127.0.0.1:3553/user/"+MANAGER;
 
 
-    public static final String SERVER_RESPONSE =  "user log in to server";
     public static final String SERVER_IS_OFFLINE_CONN =  "server is offline!";
     public static final String SERVER_IS_OFFLINE_DISCONN =  "server is offline! try again later!";
     public static String CONNECT_FAIL(String username){return username + " is in use!";}
     public static String CONNECT_SUCC(String username){return username + " has connected successfully!";}
-    public static String DISCONNECT_FAIL(String username){return username + " already disconnected!";}
     public static String DISCONNECT_SUCC(String username){return username + " has been disconnected successfully!";}
     public static String NOT_EXIST(String notExits){return notExits + " does not exist!";}
 

@@ -21,9 +21,6 @@ public class UserInfo{
         return actor;
     }
 
-    public void setActor(ActorRef actor) {
-        this.actor = actor;
-    }
 
     @Override
     public String toString() {

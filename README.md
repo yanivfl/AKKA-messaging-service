@@ -10,14 +10,6 @@ the different actors, hierarchy, implemented behaviors,
 and kinds of messages passed and their effect on behavior.
 Be sure to detail it to the fullest!
 
-2. kill clientref when disconnected, poison pill or something else.
- - done - poisonpill, also killed all routers after broadcast. deleted killing after
- server disconnect. 
- 
-3. document all fucntions
-4. eliminate logs after client disconnect. other clients in group get info logs - done
-5. reuse send to server request. - ndone
-6. in manager, all for loops -> stream.map - done
 
 ##### Client
 

@@ -58,13 +58,19 @@ public class ClientActor extends AbstractActor {
     }
 
     /**
-     * on recievin error message, prints it
+     * on recieving error message, prints it with red color
      * @param errorMsg
      */
     private void onErrorMessage(ErrorMessage errorMsg) {
         System.out.println(ANSI_RED+ errorMsg.error+ ANSI_RESET);
     }
 
+    /**
+     * prints message, and goes to sleep.
+     * thread will wake up once user answers yes or no in keyboard.
+     * sends answer to source client who invited.
+     * @param reqMsg
+     */
     private void onGroupInviteRequestReplyMessage(GroupInviteRequestReplyMessage reqMsg) {
         System.out.println(reqMsg.text);
         expectingInviteAnswer.set(true);
