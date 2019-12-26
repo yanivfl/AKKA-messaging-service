@@ -274,6 +274,8 @@ public class Manager extends AbstractActor {
         if (!ValidateIsGroupContainsUser(group, sourceUserName, true)) return;
         if (ValidateIsUserAdmin(group, targetUserName, false)) return;
 
+        if(group.getUserGroupMode(targetUserName) == GroupInfo.groupMode.CO_ADMIN) //co-admin cant remove co-admin, only admin
+            if (!ValidateIsUserAdmin(group, sourceUserName, true)) return;
         //pre-conditions checked!
         logger.info(targetUserName + " will be removed from the "+ groupName);
 
@@ -369,6 +371,7 @@ public class Manager extends AbstractActor {
         // extra pre-conditions
         if (!ValidateIsGroupContainsUser(group, targetUserName, true)) return;
         if (ValidateIsUserAdmin(group, targetUserName, false)) return; // admin can`t promote to co-admin
+        if (ValidateIsUserCoAdmin(group, targetUserName, false)) return; //  co-admin can`t promote to co-admin, already co-admin
 
 
         //pre-conditions checked!
@@ -402,6 +405,8 @@ public class Manager extends AbstractActor {
         // extra pre-conditions
         if (!ValidateIsGroupContainsUser(group, targetUserName, true)) return;
         if (ValidateIsUserAdmin(group, targetUserName, false)) return;
+        if (!ValidateIsUserCoAdmin(group, targetUserName, true)) return; //  can`t demote if user isn't co-admin
+
 
         //pre-conditions checked!
         logger.info(targetUserName + " will be removed from the "+ groupName +" co-admin list");
@@ -491,6 +496,27 @@ public class Manager extends AbstractActor {
     }
 
     /**
+     * validates if user is co-admin with expected behavior
+     * if not, sends error to user
+     * @param group
+     * @param userName
+     * @param expectedMuted
+     * @return true iff user is co admin
+     */
+    private boolean ValidateIsUserCoAdmin(GroupInfo group,String userName, boolean expectedMuted) {
+        boolean isCoAdmin = group.isCoAdmin(userName);
+        if(!isCoAdmin && expectedMuted){
+            logger.info(Constants.GROUP_COADMIN_REMOVE_ERROR(group.getGroupName(),userName));
+            getSender().tell(new ErrorMessage(Constants.GROUP_COADMIN_REMOVE_ERROR(group.getGroupName(),userName)), ActorRef.noSender());
+        }
+        if(isCoAdmin && !expectedMuted){
+            logger.info(Constants.GROUP_COADMIN_ADD_ERROR(group.getGroupName(),userName));
+            getSender().tell(new ErrorMessage(Constants.GROUP_COADMIN_ADD_ERROR(group.getGroupName(),userName)), ActorRef.noSender());
+        }
+        return isCoAdmin;
+    }
+
+    /**
      * validates if group contains user with expected beavior.
      * if not -> sends error
      * @param group
@@ -559,7 +585,6 @@ public class Manager extends AbstractActor {
      */
     private boolean ValidateIsUserExist(String userName, boolean expectedExist) {
         boolean isExist = usersMap.containsKey(userName);
-        logger.info("isExist: " + isExist+ ", userName: "+ userName+ ", expected: " + expectedExist);
         if(isExist && !expectedExist){
             logger.info(Constants.CONNECT_FAIL(userName));
             getSender().tell(new ErrorMessage(Constants.CONNECT_FAIL(userName)), ActorRef.noSender());

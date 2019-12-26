@@ -24,12 +24,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
         private static final Scanner scanner = new Scanner(System.in);   // Creating a Scanner object
         private static boolean connect = false;
         private static String clientUserName = "";
-        private static final Timeout timeout = Timeout.create(Duration.ofSeconds(2));
+        private static final Timeout timeout = Timeout.create(Duration.ofSeconds(1));
         private static AtomicBoolean isInviteAnswer = new AtomicBoolean(false); //client ansew from keyboard
         private static AtomicBoolean expectingInviteAnswer = new AtomicBoolean(false); //expecting yes or no from keyboard
         private static final Object waitingObject = new Object();
-        public static final String ANSI_RESET = "\u001B[0m";
-        public static final String ANSI_RED = "\u001B[31m";
 
 
         public static void main(String[] args) {
@@ -98,7 +96,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
          */
         private static void getInviteAnswer(String[] command) {
             if (command.length != 1) {
-                System.out.println("Answer must be \"yes\" or \"no\" (more than 1 word)");
+                System.out.println(Constants.ERROR_PRINTING("Answer must be \"yes\" or \"no\" (more than 1 word)"));
                 return;
             }
             String  answer = command[0].toLowerCase();
@@ -114,11 +112,11 @@ import java.util.concurrent.atomic.AtomicBoolean;
                             waitingObject.notifyAll();
                         }
                     } catch (Exception e) {
-                        e.printStackTrace();
+//                        e.printStackTrace();
                     }
                     return;
                 default:
-                    System.out.println("Answer must be \"yes\" or \"no\" ");
+                    System.out.println(Constants.ERROR_PRINTING("Answer must be \"yes\" or \"no\" "));
             }
         }
 
@@ -130,6 +128,12 @@ import java.util.concurrent.atomic.AtomicBoolean;
         private static void userCommandSwitch(String[] command) {
 
             switch (command[1]) { // /user disconnect
+                case "connect":
+                    if (command.length == 3) {
+                        System.out.println(Constants.ERROR_PRINTING(Constants.ALREADY_CONNECT));
+                        return;
+                    }
+
                 case "disconnect":
                     if (command.length == 2) {
                         onDisconnect();
@@ -146,7 +150,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
                         return;
                     }
             }
-            System.out.println("The User feature you requested does not exist, please try again");
+            System.out.println(Constants.ERROR_PRINTING("The User feature you requested does not exist, please try again"));
         }
 
         /**
@@ -161,11 +165,15 @@ import java.util.concurrent.atomic.AtomicBoolean;
                         onGroupCreate(command[2]);
                         return;
                     }
+                    break;
+
                 case "leave":
                     if (command.length == 3) {
                         onGroupLeave(command[2]);
                         return;
                     }
+                    break;
+
                 case "user":
                     groupUserCommandSwitch(command);
                     return;
@@ -176,8 +184,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
                     groupSendCommandSwitch(command);
                     return;
             }
-
-            System.out.println("The Group feature you requested does not exist, please try again");
+            System.out.println(Constants.ERROR_PRINTING("The Group feature you requested does not exist, please try again"));
         }
 
         /**
@@ -191,13 +198,15 @@ import java.util.concurrent.atomic.AtomicBoolean;
                         onGroupSendText(command[3], extractMsg(command, 4));
                         return;
                     }
+                    break;
                 case "file":
                     if (command.length == 5) {
                         onGroupSendFile(command[3], command[4]);
                         return;
                     }
+                    break;
             }
-            System.out.println("The Group send feature you requested does not exist, please try again");
+            System.out.println(Constants.ERROR_PRINTING("The Group send feature you requested does not exist, please try again"));
         }
 
 
@@ -212,23 +221,30 @@ import java.util.concurrent.atomic.AtomicBoolean;
                         onGroupInvite(command[3], command[4]);
                         return;
                     }
+                    break;
+
                 case "remove":
                     if (command.length == 5) {
                         onGroupRemove(command[3], command[4]);
                         return;
                     }
+                    break;
+
                 case "mute":
                     if (command.length == 6) {
                         onGroupMute(command[3], command[4], command[5]);
                         return;
                     }
+                    break;
+
                 case "unmute":
                     if (command.length == 5) {
                         onGroupUnMute(command[3], command[4]);
                         return;
                     }
+                    break;
             }
-            System.out.println("The Group user feature you requested does not exist, please try again");
+            System.out.println(Constants.ERROR_PRINTING("The Group user feature you requested does not exist, please try again"));
         }
 
         /**
@@ -240,16 +256,18 @@ import java.util.concurrent.atomic.AtomicBoolean;
                 case "add":
                     if (command.length == 5) {
                         onCoAdminAdd(command[3], command[4]);
-                        break;
+                        return;
                     }
+                    break;
+
                 case "remove":
                     if (command.length == 5) {
                         onCoAdminRemove(command[3], command[4]);
-                        break;
+                        return;
                     }
-                default:
-                    System.out.println("The Group Co-admin feature you requested does not exist, please try again");
+                    break;
             }
+            System.out.println(Constants.ERROR_PRINTING("The Group Co-admin feature you requested does not exist, please try again"));
         }
 
         /**
@@ -289,11 +307,11 @@ import java.util.concurrent.atomic.AtomicBoolean;
                     connect = true;
                     System.out.println(((TextMessage) result).text);
                 } else
-                    System.out.println(ANSI_RED + ((ErrorMessage) result).error + ANSI_RESET);
+                    System.out.println(((ErrorMessage)result).error);
 
             } catch (Exception e) {
-                e.printStackTrace();
-                System.out.println(Constants.SERVER_IS_OFFLINE_CONN);
+                clientRef.tell(PoisonPill.getInstance(), ActorRef.noSender());
+                System.out.println(Constants.ERROR_PRINTING(Constants.SERVER_IS_OFFLINE_CONN));
             }
         }
 
@@ -315,11 +333,11 @@ import java.util.concurrent.atomic.AtomicBoolean;
                     clientRef.tell(PoisonPill.getInstance(), ActorRef.noSender());
                     System.out.println(((TextMessage) result).text);
                 } else
-                    System.out.println(ANSI_RED + ((ErrorMessage) result).error + ANSI_RESET);
+                    System.out.println(((ErrorMessage) result).error);
 
             } catch (Exception e) {
-                e.printStackTrace();
-                System.out.println(Constants.SERVER_IS_OFFLINE_DISCONN);
+//                e.printStackTrace();
+                System.out.println(Constants.ERROR_PRINTING(Constants.SERVER_IS_OFFLINE_DISCONN));
             }
         }
 
@@ -401,20 +419,21 @@ import java.util.concurrent.atomic.AtomicBoolean;
                                     targetActor.tell(new TextMessage(Constants.GROUP_WELCOME_PROMPT(groupName)), clientRef);
                                 }
                             } else{
-                                System.out.println(ANSI_RED + ((ErrorMessage) result).error + ANSI_RESET);
+                                System.out.println(((ErrorMessage) result).error);
                             }
                         } catch (Exception e) {
-                            e.printStackTrace();
+//                            e.printStackTrace();
                             System.out.println(Constants.SERVER_IS_OFFLINE_CONN);
                         }
                     }
                     System.out.println(Constants.GROUP_RESPOND_TO_SOURCE(targetUserName, answer));
                 } else{
-                    System.out.println(ANSI_RED + ((ErrorMessage) resultInvite).error + ANSI_RESET);
+                    System.out.println(((ErrorMessage)resultInvite).error);
                 }
             } catch (Exception e) {
-                e.printStackTrace();
-                System.out.println(Constants.GROUP_INVITE_DIDNT_ANSWER(targetUserName));
+//                e.printStackTrace();
+                System.out.println(Constants.ERROR_PRINTING(Constants.GROUP_INVITE_DIDNT_ANSWER(targetUserName)));
+                //todo: tell target "you didnt answer on thime"
             }
         }
 
@@ -450,7 +469,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
                         clientUserName, fileName, groupName, buffer)), clientRef);
                 broadcastRouter.tell(PoisonPill.getInstance(), ActorRef.noSender());
             } catch (IOException e) {
-                e.printStackTrace();
+//                e.printStackTrace();
             }
         }
 
@@ -470,12 +489,12 @@ import java.util.concurrent.atomic.AtomicBoolean;
                     targetActor.tell(new TextMessage(Constants.PRINTING( groupName, clientUserName,
                             Constants.GROUP_REMOVE_PROMPT(groupName, clientUserName)
                     )), clientRef);
-                } else{
-                    System.out.println(ANSI_RED + ((ErrorMessage) result).error + ANSI_RESET);
-                }
+                } else
+                    System.out.println(((ErrorMessage) result).error);
+
             } catch (Exception e) {
-                e.printStackTrace();
-                System.out.println(Constants.SERVER_IS_OFFLINE_CONN);
+//                e.printStackTrace();
+                System.out.println(Constants.ERROR_PRINTING(Constants.SERVER_IS_OFFLINE_CONN));
             }
         }
 
@@ -496,12 +515,12 @@ import java.util.concurrent.atomic.AtomicBoolean;
                     targetActor.tell(new TextMessage(Constants.PRINTING( groupName, clientUserName,
                             Constants.GROUP_MUTE(groupName, timeInSeconds,clientUserName)
                     )), clientRef);
-                } else{
-                    System.out.println(ANSI_RED + ((ErrorMessage) result).error + ANSI_RESET);
-                }
+                } else
+                    System.out.println(((ErrorMessage)result).error);
+
             } catch (Exception e) {
-                e.printStackTrace();
-                System.out.println(Constants.SERVER_IS_OFFLINE_CONN);
+//                e.printStackTrace();
+                System.out.println(Constants.ERROR_PRINTING(Constants.SERVER_IS_OFFLINE_CONN));
             }
         }
 
@@ -521,12 +540,12 @@ import java.util.concurrent.atomic.AtomicBoolean;
                     targetActor.tell(new TextMessage(Constants.PRINTING( groupName, clientUserName,
                             Constants.GROUP_UN_MUTE(groupName,clientUserName)
                     )), clientRef);
-                } else{
-                    System.out.println(ANSI_RED + ((ErrorMessage) result).error + ANSI_RESET);
-                }
+                } else
+                    System.out.println(((ErrorMessage) result).error);
+
             } catch (Exception e) {
-                e.printStackTrace();
-                System.out.println(Constants.SERVER_IS_OFFLINE_CONN);
+//                e.printStackTrace();
+                System.out.println(Constants.ERROR_PRINTING(Constants.SERVER_IS_OFFLINE_CONN));
             }
         }
 
@@ -560,10 +579,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
                 if (result.getClass() == AddressMessage.class)
                     return ((AddressMessage) result).targetActor;
                 else
-                    System.out.println(ANSI_RED + ((ErrorMessage) result).error + ANSI_RESET);
+                    System.out.println(((ErrorMessage) result).error);
             } catch (Exception e) {
-                e.printStackTrace();
-                System.out.println(Constants.SERVER_IS_OFFLINE_CONN);
+//                e.printStackTrace();
+                System.out.println(Constants.ERROR_PRINTING(Constants.SERVER_IS_OFFLINE_CONN));
             }
             return null;
         }
@@ -576,7 +595,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
         private static boolean isFileExists(String filePath) {
             File file = new File(filePath);
             if (!file.exists() || file.isDirectory()) {
-                System.out.println(Constants.NOT_EXIST(filePath));
+                System.out.println(Constants.ERROR_PRINTING(Constants.NOT_EXIST(filePath)));
                 return false;
             }
             return true;

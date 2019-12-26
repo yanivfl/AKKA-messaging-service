@@ -71,7 +71,7 @@ public class ClientActor extends AbstractActor {
      * sends answer to source client who invited.
      * @param reqMsg
      */
-    private void onGroupInviteRequestReplyMessage(GroupInviteRequestReplyMessage reqMsg) {
+    private void onGroupInviteRequestReplyMessage(GroupInviteRequestReplyMessage reqMsg) { //TODO: onRecieveGroupInvition
         System.out.println(reqMsg.text);
         expectingInviteAnswer.set(true);
         try{
@@ -85,3 +85,5 @@ public class ClientActor extends AbstractActor {
         }
     }
 }
+//TODO:
+//onSendGroupInvition

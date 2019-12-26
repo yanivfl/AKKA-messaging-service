@@ -34,6 +34,8 @@ public class GroupInfo {
 
     public boolean isMuted(String username) { return mutedusers.contains(username); }
 
+    public boolean isCoAdmin(String username) { return coAdmins.contains(username); }
+
     public List<String> getUsers() { return users; }
 
     public GroupRouter getGroupRouter() { return groupRouter; }

@@ -8,7 +8,6 @@ import java.io.Serializable;
  */
 public class Messages implements Serializable {
 
-
     public static class DisconnectMessage extends Messages {
         public final String userName;
 
@@ -28,10 +27,12 @@ public class Messages implements Serializable {
     }
 
     public static class ErrorMessage extends Messages {
+        public static final String ANSI_RESET = "\u001B[0m";
+        public static final String ANSI_RED = "\u001B[31m";
         public final String error;
 
         public ErrorMessage(String error) {
-            this.error = error;
+            this.error = ANSI_RED + error + ANSI_RESET;
         }
     }
 
