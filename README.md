@@ -6,7 +6,8 @@ Assignment 2
 
 
 **all functions are documented.
-In assignment 2 we created three packages: Client , Server and Utils. 
+
+In this assignment, We created 3 packages: Client , Server and Utils. 
 
 ## Package Client
 - ClientMain.java is the system actor.
@@ -78,7 +79,7 @@ for every user, the manager saves a UserInfo containing the following informatio
     1.  List<String> groups: list of groups user is in.
     2.  ActorRef actor: ActorRef of this user.
 
-##### Additional Information:
+## Additional Information:
 - On request /group leave <groupname>, it is written: "same as above"...
   We understood this as also to broadcast the same message.
   This is why, the onGroupLeaveMessage(GroupLeaveMessage leaveMsg) is implemented using switch case, and ADMIN will broadcast admin, coadmin and user message. Coadmin will broadcast coadmin and user message. user will broadcast user message.
