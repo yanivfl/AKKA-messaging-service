@@ -433,7 +433,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
             } catch (Exception e) {
 //                e.printStackTrace();
                 System.out.println(Constants.ERROR_PRINTING(Constants.GROUP_INVITE_DIDNT_ANSWER(targetUserName)));
-                //todo: tell target "you didnt answer on thime"
+                //todo: tell target "you didn't answer on time"
             }
         }
 
