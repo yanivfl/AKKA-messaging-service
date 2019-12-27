@@ -47,7 +47,7 @@ public class Constants{
     public static String GROUP_TARGET_ALREADY_BELONGS(String groupName, String targetUserName){return targetUserName+ " is already in " + groupName + "!";}
     public static String GROUP_RESPOND_TO_SOURCE(String username, String answer){return username+ " responded to group invite with the following answer: " + answer;}
     public static String GROUP_INVITE_PROMPT(String groupName){ return "You have been invited to " + groupName + ", Accept?";}
-    public static String GROUP_INVITE_TIMEOUT(String groupName){ return "You didn't answer on time to group:" + groupName + "Invitation has been canceled";}
+    public static String GROUP_INVITE_TIMEOUT(String groupName){ return "You didn't answer on time to group:" + groupName + " Invitation has been canceled";}
     public static String GROUP_WELCOME_PROMPT(String groupName){ return "Welcome to " + groupName + "!";}
     public static String GROUP_REMOVE_PROMPT(String groupName, String sourceUserName){ return "You have been removed from "+ groupName + " by " + sourceUserName+ "!";}
     public static String GROUP_ACTION_ON_ADMIN(String groupName, String sourceUserName){return " action denied because " + sourceUserName+ " is admin in " + groupName;}

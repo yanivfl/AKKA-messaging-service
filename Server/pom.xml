@@ -10,6 +10,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>Server</artifactId>
+
     <build>
         <plugins>
             <plugin>
@@ -25,11 +26,12 @@
                 <artifactId>exec-maven-plugin</artifactId>
                 <version>1.2.1</version>
                 <configuration>
-                    <mainClass>java.MainServer</mainClass>
+                    <mainClass>MainServer</mainClass>
                 </configuration>
             </plugin>
         </plugins>
     </build>
+
     <dependencies>
         <dependency>
             <artifactId>Utils</artifactId>

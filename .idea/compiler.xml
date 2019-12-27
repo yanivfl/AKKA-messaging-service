@@ -11,8 +11,5 @@
         <module name="Utils" />
       </profile>
     </annotationProcessing>
-    <bytecodeTargetLevel>
-      <module name="akka-remote-ass2" target="1.8" />
-    </bytecodeTargetLevel>
   </component>
 </project>

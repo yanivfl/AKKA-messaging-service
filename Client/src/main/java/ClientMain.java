@@ -82,7 +82,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
                 userInput = scanner.nextLine();
                 command = userInput.split("\\s+");
                 if (command.length != 3 || !command[0].equals("/user") || !command[1].equals("connect"))
-                    System.out.println("Before any chat activity, you must connect");
+                    System.out.println(Constants.ERROR_PRINTING("Before any chat activity, you must connect"));
                 else
                     onConnect(command[2]);
             }
